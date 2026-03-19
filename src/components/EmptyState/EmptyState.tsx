@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useTheme } from '../../context';
 
 export interface EmptyStateProps {
   title?: string;
@@ -10,11 +11,13 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   title = 'No Entries Yet',
   subtitle = 'Tap the + button to add your first travel memory!',
 }) => {
+  const { theme } = useTheme();
+
   return (
     <View style={styles.container}>
       <Text style={styles.illustration}>🗺️</Text>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.subtitle}>{subtitle}</Text>
+      <Text style={[styles.title, { color: theme.textPrimary }]}>{title}</Text>
+      <Text style={[styles.subtitle, { color: theme.textMuted }]}>{subtitle}</Text>
     </View>
   );
 };
@@ -34,12 +37,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1A1A1A',
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 15,
-    color: '#888888',
     textAlign: 'center',
     lineHeight: 22,
   },

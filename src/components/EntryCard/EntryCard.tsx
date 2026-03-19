@@ -8,12 +8,15 @@ import {
   View,
 } from 'react-native';
 
+import { Theme } from '../../constants';
+
 export interface EntryCardProps {
   id: string;
   imageUri: string;
   address: string;
   createdAt: string;
   onDelete: (id: string) => void;
+  theme: Theme;
 }
 
 export const EntryCard: React.FC<EntryCardProps> = ({
@@ -22,6 +25,7 @@ export const EntryCard: React.FC<EntryCardProps> = ({
   address,
   createdAt,
   onDelete,
+  theme,
 }) => {
   const [imageError, setImageError] = useState(false);
 
@@ -45,20 +49,16 @@ export const EntryCard: React.FC<EntryCardProps> = ({
       'Are you sure you want to delete this travel entry? This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => onDelete(id),
-        },
+        { text: 'Delete', style: 'destructive', onPress: () => onDelete(id) },
       ]
     );
   };
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: theme.cardBackground, shadowColor: theme.cardShadow }]}>
       {/* Photo */}
       {imageError ? (
-        <View style={styles.imageFallback}>
+        <View style={[styles.imageFallback, { backgroundColor: theme.surfaceSecondary }]}>
           <Text style={styles.imageFallbackText}>📷 Image unavailable</Text>
         </View>
       ) : (
@@ -73,24 +73,24 @@ export const EntryCard: React.FC<EntryCardProps> = ({
       {/* Content */}
       <View style={styles.content}>
         <View style={styles.info}>
-          {/* Address */}
           <View style={styles.row}>
             <Text style={styles.icon}>📍</Text>
-            <Text style={styles.address} numberOfLines={2}>
+            <Text
+              style={[styles.address, { color: theme.textPrimary }]}
+              numberOfLines={2}
+            >
               {address || 'Unknown location'}
             </Text>
           </View>
-
-          {/* Date */}
           <View style={styles.row}>
             <Text style={styles.icon}>🗓</Text>
-            <Text style={styles.date}>{formattedDate}</Text>
+            <Text style={[styles.date, { color: theme.textMuted }]}>{formattedDate}</Text>
           </View>
         </View>
 
         {/* Delete Button */}
         <TouchableOpacity
-          style={styles.deleteButton}
+          style={[styles.deleteButton, { backgroundColor: theme.errorLight }]}
           onPress={handleDelete}
           accessibilityLabel="Delete entry"
           accessibilityRole="button"
@@ -104,12 +104,10 @@ export const EntryCard: React.FC<EntryCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     marginHorizontal: 16,
     marginVertical: 8,
     overflow: 'hidden',
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -123,7 +121,6 @@ const styles = StyleSheet.create({
   imageFallback: {
     width: '100%',
     height: 200,
-    backgroundColor: '#F0F0F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -154,19 +151,16 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
     lineHeight: 20,
   },
   date: {
     fontSize: 12,
-    color: '#888888',
     lineHeight: 18,
   },
   deleteButton: {
     marginLeft: 12,
     padding: 8,
     borderRadius: 8,
-    backgroundColor: '#FFF0F0',
   },
   deleteIcon: {
     fontSize: 18,

@@ -7,13 +7,13 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
-    shouldShowBanner: true,   // ← add this
-    shouldShowList: true,     // ← add this
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
 export const requestPermission = async (): Promise<boolean> => {
-  // Android 13+ requires explicit POST_NOTIFICATIONS permission
+  // Android 13+ requires a notification channel
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('travel-diary', {
       name: 'Travel Diary',
@@ -26,7 +26,6 @@ export const requestPermission = async (): Promise<boolean> => {
   const { granted, canAskAgain } = await Notifications.getPermissionsAsync();
 
   if (granted) return true;
-
   if (!canAskAgain) return false;
 
   const { granted: newGranted } = await Notifications.requestPermissionsAsync({
@@ -56,7 +55,7 @@ export const sendNotification = async (title: string, body: string): Promise<voi
         sound: true,
         data: { source: 'travel-diary' },
       },
-      trigger: null, // null = fire immediately
+      trigger: null,
     });
   } catch (error) {
     console.error(
