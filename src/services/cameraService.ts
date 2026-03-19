@@ -36,9 +36,8 @@ export const openCamera = async (): Promise<CameraResult> => {
   try {
     result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
+      allowsEditing: false, // Native crop editor has iOS overflow bugs — skip it
+      quality: 0.85,
     });
   } catch (error) {
     throw new Error(
