@@ -43,7 +43,7 @@ export const Button: React.FC<ButtonProps> = ({
         style,
       ]}
       disabled={isDisabled}
-      activeOpacity={0.75}
+      activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
@@ -52,7 +52,7 @@ export const Button: React.FC<ButtonProps> = ({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'primary' ? '#FFFFFF' : '#4F46E5'}
+          color={variant === 'primary' ? '#FFFFFF' : '#111111'}
         />
       ) : (
         <Text style={[styles.label, styles[`${variant}Label`], styles[`${size}Label`]]}>
@@ -65,76 +65,33 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 12,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
   },
-  fullWidth: {
-    width: '100%',
-  },
-  disabled: {
-    opacity: 0.45,
-  },
+  fullWidth: { width: '100%' },
+  disabled: { opacity: 0.35 },
 
   // Variants
-  primary: {
-    backgroundColor: '#4F46E5',
-  },
-  secondary: {
-    backgroundColor: '#F1F0FF',
-    borderWidth: 1,
-    borderColor: '#C7C4F4',
-  },
-  danger: {
-    backgroundColor: '#EF4444',
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-  },
+  primary: { backgroundColor: '#111111' },
+  secondary: { backgroundColor: '#F4F4F5', borderWidth: 1, borderColor: '#E4E4E7' },
+  danger: { backgroundColor: '#DC2626' },
+  ghost: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#E4E4E7' },
 
   // Sizes
-  sm: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  md: {
-    paddingHorizontal: 20,
-    paddingVertical: 13,
-  },
-  lg: {
-    paddingHorizontal: 28,
-    paddingVertical: 16,
-  },
+  sm: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 6 },
+  md: { paddingHorizontal: 20, paddingVertical: 12 },
+  lg: { paddingHorizontal: 24, paddingVertical: 15 },
 
   // Labels
-  label: {
-    fontWeight: '600',
-  },
-  primaryLabel: {
-    color: '#FFFFFF',
-  },
-  secondaryLabel: {
-    color: '#4F46E5',
-  },
-  dangerLabel: {
-    color: '#FFFFFF',
-  },
-  ghostLabel: {
-    color: '#374151',
-  },
+  label: { fontWeight: '500', letterSpacing: 0.1 },
+  primaryLabel: { color: '#FFFFFF' },
+  secondaryLabel: { color: '#111111' },
+  dangerLabel: { color: '#FFFFFF' },
+  ghostLabel: { color: '#52525B' },
 
-  // Label sizes
-  smLabel: {
-    fontSize: 13,
-  },
-  mdLabel: {
-    fontSize: 15,
-  },
-  lgLabel: {
-    fontSize: 17,
-  },
+  smLabel: { fontSize: 13 },
+  mdLabel: { fontSize: 14 },
+  lgLabel: { fontSize: 15 },
 });

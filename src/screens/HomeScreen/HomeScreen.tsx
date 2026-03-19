@@ -51,7 +51,7 @@ export const HomeScreen: React.FC = () => {
     } catch (err) {
       Alert.alert(
         'Delete Failed',
-        err instanceof Error ? err.message : 'Could not delete entry. Please try again.'
+        err instanceof Error ? err.message : 'Could not delete entry.'
       );
     }
   };
@@ -67,57 +67,51 @@ export const HomeScreen: React.FC = () => {
     />
   );
 
-  const renderHeader = () => (
-    <View style={styles.listHeader}>
-      <ThemedText variant="caption" style={{ color: theme.textMuted }}>
-        {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
-      </ThemedText>
-    </View>
-  );
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+
       {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <ThemedText variant="h1" style={{ color: theme.textPrimary }}>
+      <View style={[styles.header, { borderBottomColor: theme.border }]}>
+        <View style={styles.headerLeft}>
+          <ThemedText variant="h2" style={{ color: theme.textPrimary }}>
             Travel Diary
           </ThemedText>
-          <ThemedText variant="bodySmall" style={{ color: theme.textMuted }}>
-            Your memories, mapped.
-          </ThemedText>
+          {!loading && !error && (
+            <Text style={[styles.entryCount, { color: theme.textMuted }]}>
+              {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
+            </Text>
+          )}
         </View>
+
+        {/* Theme toggle */}
         <TouchableOpacity
           onPress={toggleTheme}
-          style={[styles.themeToggle, { backgroundColor: theme.surfaceSecondary }]}
+          style={[styles.iconButton, { borderColor: theme.border }]}
           accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           accessibilityRole="button"
         >
-          <Text style={styles.themeToggleIcon}>{isDark ? '☀️' : '🌙'}</Text>
+          <Text style={[styles.toggleSymbol, { color: theme.textSecondary }]}>
+            {isDark ? '○' : '●'}
+          </Text>
         </TouchableOpacity>
       </View>
 
       {/* Body */}
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <ThemedText variant="bodySmall" style={{ color: theme.textMuted, marginTop: 8 }}>
-            Loading your entries...
-          </ThemedText>
+          <ActivityIndicator size="small" color={theme.textMuted} />
         </View>
       ) : error ? (
         <View style={styles.centered}>
-          <Text style={styles.errorEmoji}>⚠️</Text>
-          <ThemedText variant="body" style={{ color: theme.error, textAlign: 'center' }}>
+          <Text style={[styles.errorSymbol, { color: theme.textMuted }]}>⊘</Text>
+          <ThemedText variant="bodySmall" style={{ color: theme.textMuted, textAlign: 'center' }}>
             {error}
           </ThemedText>
           <TouchableOpacity
             onPress={loadEntries}
-            style={[styles.retryButton, { backgroundColor: theme.primaryLight }]}
+            style={[styles.retryButton, { borderColor: theme.border }]}
           >
-            <ThemedText variant="label" style={{ color: theme.primary }}>
-              Retry
-            </ThemedText>
+            <Text style={[styles.retryText, { color: theme.textSecondary }]}>Try again</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -125,7 +119,6 @@ export const HomeScreen: React.FC = () => {
           data={entries}
           keyExtractor={item => item.id}
           renderItem={renderEntry}
-          ListHeaderComponent={entries.length > 0 ? renderHeader : null}
           ListEmptyComponent={<EmptyState />}
           contentContainerStyle={
             entries.length === 0 ? styles.emptyContainer : styles.listContent
@@ -136,14 +129,15 @@ export const HomeScreen: React.FC = () => {
 
       {/* FAB */}
       <TouchableOpacity
-        style={[styles.fab, { backgroundColor: theme.fabBackground, shadowColor: theme.fabShadow }]}
+        style={[styles.fab, { backgroundColor: theme.fabBackground }]}
         onPress={() => navigation.navigate('AddEntry')}
-        activeOpacity={0.85}
+        activeOpacity={0.8}
         accessibilityLabel="Add new travel entry"
         accessibilityRole="button"
       >
-        <Text style={[styles.fabIcon, { color: theme.fabIcon }]}>＋</Text>
+        <Text style={[styles.fabSymbol, { color: theme.fabIcon }]}>+</Text>
       </TouchableOpacity>
+
     </SafeAreaView>
   );
 };
@@ -155,23 +149,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingTop: 14,
+    paddingBottom: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  themeToggle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  headerLeft: {
+    gap: 2,
+  },
+  entryCount: {
+    fontSize: 12,
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  themeToggleIcon: { fontSize: 20 },
-  listHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 4,
-    paddingBottom: 8,
+  toggleSymbol: {
+    fontSize: 14,
   },
-  listContent: { paddingBottom: 100 },
+  listContent: { paddingTop: 8, paddingBottom: 100 },
   emptyContainer: { flex: 1 },
   centered: {
     flex: 1,
@@ -180,30 +179,38 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 32,
   },
-  errorEmoji: { fontSize: 40 },
+  errorSymbol: {
+    fontSize: 28,
+  },
   retryButton: {
-    marginTop: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 10,
+    marginTop: 4,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 6,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  retryText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   fab: {
     position: 'absolute',
-    bottom: 32,
-    right: 24,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    bottom: 28,
+    right: 20,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 6,
   },
-  fabIcon: {
-    fontSize: 28,
-    lineHeight: 32,
+  fabSymbol: {
+    fontSize: 26,
     fontWeight: '300',
+    lineHeight: 30,
   },
 });

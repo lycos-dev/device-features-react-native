@@ -33,7 +33,7 @@ export const EntryCard: React.FC<EntryCardProps> = ({
     try {
       return new Date(createdAt).toLocaleDateString(undefined, {
         year: 'numeric',
-        month: 'long',
+        month: 'short',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
@@ -46,7 +46,7 @@ export const EntryCard: React.FC<EntryCardProps> = ({
   const handleDelete = () => {
     Alert.alert(
       'Delete Entry',
-      'Are you sure you want to delete this travel entry? This action cannot be undone.',
+      'This entry will be permanently removed.',
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete', style: 'destructive', onPress: () => onDelete(id) },
@@ -58,8 +58,9 @@ export const EntryCard: React.FC<EntryCardProps> = ({
     <View style={[styles.card, { backgroundColor: theme.cardBackground, shadowColor: theme.cardShadow }]}>
       {/* Photo */}
       {imageError ? (
-        <View style={[styles.imageFallback, { backgroundColor: theme.surfaceSecondary }]}>
-          <Text style={styles.imageFallbackText}>📷 Image unavailable</Text>
+        <View style={[styles.imageFallback, { backgroundColor: theme.surfaceSecondary, borderBottomWidth: 1, borderBottomColor: theme.border }]}>
+          <Text style={[styles.fallbackIcon, { color: theme.textMuted }]}>⊘</Text>
+          <Text style={[styles.fallbackText, { color: theme.textMuted }]}>Image unavailable</Text>
         </View>
       ) : (
         <Image
@@ -70,32 +71,32 @@ export const EntryCard: React.FC<EntryCardProps> = ({
         />
       )}
 
-      {/* Content */}
-      <View style={styles.content}>
+      {/* Content row */}
+      <View style={[styles.content, { borderTopWidth: 1, borderTopColor: theme.border }]}>
         <View style={styles.info}>
+          {/* Address */}
           <View style={styles.row}>
-            <Text style={styles.icon}>📍</Text>
-            <Text
-              style={[styles.address, { color: theme.textPrimary }]}
-              numberOfLines={2}
-            >
+            <Text style={[styles.symbol, { color: theme.textMuted }]}>◎</Text>
+            <Text style={[styles.address, { color: theme.textPrimary }]} numberOfLines={1}>
               {address || 'Unknown location'}
             </Text>
           </View>
+          {/* Date */}
           <View style={styles.row}>
-            <Text style={styles.icon}>🗓</Text>
+            <Text style={[styles.symbol, { color: theme.textMuted }]}>◷</Text>
             <Text style={[styles.date, { color: theme.textMuted }]}>{formattedDate}</Text>
           </View>
         </View>
 
-        {/* Delete Button */}
+        {/* Delete */}
         <TouchableOpacity
-          style={[styles.deleteButton, { backgroundColor: theme.errorLight }]}
+          style={[styles.deleteButton, { borderLeftWidth: 1, borderLeftColor: theme.border }]}
           onPress={handleDelete}
           accessibilityLabel="Delete entry"
           accessibilityRole="button"
+          activeOpacity={0.6}
         >
-          <Text style={styles.deleteIcon}>🗑</Text>
+          <Text style={[styles.deleteSymbol, { color: theme.textMuted }]}>⊗</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -104,65 +105,67 @@ export const EntryCard: React.FC<EntryCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
+    borderRadius: 12,
     marginHorizontal: 16,
-    marginVertical: 8,
+    marginVertical: 6,
     overflow: 'hidden',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
   image: {
     width: '100%',
-    height: 200,
-    backgroundColor: '#F0F0F0',
+    height: 220,
   },
   imageFallback: {
     width: '100%',
-    height: 200,
+    height: 220,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
   },
-  imageFallbackText: {
-    fontSize: 14,
-    color: '#999',
+  fallbackIcon: {
+    fontSize: 28,
+  },
+  fallbackText: {
+    fontSize: 13,
   },
   content: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    alignItems: 'stretch',
   },
   info: {
     flex: 1,
-    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 4,
   },
   row: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
+    alignItems: 'center',
+    gap: 7,
   },
-  icon: {
-    fontSize: 14,
-    marginTop: 1,
+  symbol: {
+    fontSize: 13,
+    width: 14,
+    textAlign: 'center',
   },
   address: {
     flex: 1,
-    fontSize: 14,
-    fontWeight: '600',
-    lineHeight: 20,
+    fontSize: 13,
+    fontWeight: '500',
+    letterSpacing: 0.1,
   },
   date: {
     fontSize: 12,
-    lineHeight: 18,
   },
   deleteButton: {
-    marginLeft: 12,
-    padding: 8,
-    borderRadius: 8,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  deleteIcon: {
+  deleteSymbol: {
     fontSize: 18,
   },
 });

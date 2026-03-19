@@ -8,14 +8,14 @@ export interface EmptyStateProps {
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
-  title = 'No Entries Yet',
-  subtitle = 'Tap the + button to add your first travel memory!',
+  title = 'No entries yet',
+  subtitle = 'Tap + to add your first travel entry.',
 }) => {
   const { theme } = useTheme();
 
   return (
     <View style={styles.container}>
-      <Text style={styles.illustration}>🗺️</Text>
+      <Text style={[styles.icon, { color: theme.border }]}>⊕</Text>
       <Text style={[styles.title, { color: theme.textPrimary }]}>{title}</Text>
       <Text style={[styles.subtitle, { color: theme.textMuted }]}>{subtitle}</Text>
     </View>
@@ -28,20 +28,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 40,
-    gap: 12,
+    gap: 10,
   },
-  illustration: {
-    fontSize: 64,
-    marginBottom: 8,
+  icon: {
+    fontSize: 40,
+    marginBottom: 4,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
     textAlign: 'center',
+    letterSpacing: 0.1,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 14,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 20,
   },
 });

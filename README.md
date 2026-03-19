@@ -1,36 +1,81 @@
-# Job Finder App
-A mobile job search application built with React Native and Expo.
+# Travel Diary
+
+A minimalist travel diary app built with React Native and Expo. Capture photos, automatically tag your location, and keep a record of your travels.
+
+---
 
 ## Features
-- Browse and search job listings from a live API
-- Save jobs for later review
-- Apply for jobs via an application form
-- Light and dark mode support
 
-## Screens
-- **Job Finder** — browse and search jobs, save or apply
-- **Saved Jobs** — view and manage your saved jobs
-- **Application Form** — fill out and submit a job application
-- **Settings** — toggle light/dark mode
+- **Camera** — Take photos directly from the app
+- **Location** — Automatically fetches and reverse-geocodes your address after each photo
+- **Persistent storage** — Entries saved locally using AsyncStorage
+- **Notifications** — Local notification sent after each entry is saved
+- **Dark / Light mode** — Toggle with persistence across sessions
+
+---
 
 ## Tech Stack
-- React Native + Expo
-- TypeScript
-- React Navigation (Native Stack)
-- React Context API (theme + saved jobs state)
+
+| Layer | Library |
+|---|---|
+| Framework | React Native + Expo SDK 54 |
+| Navigation | React Navigation (Native Stack) |
+| Storage | AsyncStorage |
+| Camera | expo-image-picker |
+| Location | expo-location |
+| Notifications | expo-notifications |
+| Safe Area | react-native-safe-area-context |
+| Language | TypeScript |
+
+---
 
 ## Project Structure
+
 ```
 src/
-├── components/       # Shared UI components (JobCard, BottomTabBar)
-├── constants/        # Theme colors, country data
-├── context/          # Global state (ThemeContext, SavedJobsContext)
-├── hooks/            # Custom hooks (useJobs)
-├── navigation/       # Stack navigator and route types
-├── screens/          # App screens, each with its own folder
-├── types/            # Shared TypeScript types
-└── utils/            # Utility functions (phone formatting)
+├── components/
+│   ├── EntryCard/       # Travel entry card
+│   ├── EmptyState/      # Empty list placeholder
+│   └── UI/              # Button, ThemedText
+├── screens/
+│   ├── HomeScreen/      # Entry list
+│   └── AddEntryScreen/  # Create new entry
+├── services/
+│   ├── cameraService.ts
+│   ├── locationService.ts
+│   ├── notificationService.ts
+│   └── storageService.ts
+├── hooks/
+│   ├── usePermissions.ts
+│   └── useAppInit.ts
+├── context/
+│   └── ThemeContext.tsx
+├── constants/
+│   └── theme.ts
+├── navigation/
+│   └── RootNavigator.tsx
+├── types/
+│   └── index.ts
+└── utils/
+    └── validators.ts
 ```
 
-## API
-Job listings are fetched from [Empllo](https://empllo.com/api/v1).
+---
+
+**Run on device**
+- Scan the QR code with Expo Go (iOS / Android)
+- Or press `i` for iOS simulator / `a` for Android emulator
+
+---
+
+## Permissions Required
+
+| Permission | Platform | Purpose |
+|---|---|---|
+| Camera | iOS + Android | Taking photos |
+| Location (foreground) | iOS + Android | Tagging entry location |
+| Notifications | iOS + Android | Entry saved confirmation |
+
+Permissions are requested on first launch. If denied, relevant features will show a prompt to enable them in device Settings.
+
+---

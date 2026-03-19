@@ -1,83 +1,69 @@
 export const LightTheme = {
   mode: 'light' as const,
 
-  // Backgrounds
-  background: '#F8F7FF',
+  background: '#FAFAFA',
   surface: '#FFFFFF',
-  surfaceSecondary: '#F1F0FF',
+  surfaceSecondary: '#F4F4F5',
 
-  // Text
-  textPrimary: '#1A1A1A',
-  textSecondary: '#4B5563',
-  textMuted: '#9CA3AF',
+  textPrimary: '#111111',
+  textSecondary: '#52525B',
+  textMuted: '#A1A1AA',
   textInverse: '#FFFFFF',
 
-  // Brand
-  primary: '#4F46E5',
-  primaryLight: '#EEF2FF',
-  primaryDark: '#3730A3',
+  primary: '#111111',
+  primaryLight: '#F4F4F5',
+  primaryDark: '#000000',
 
-  // Status
-  error: '#EF4444',
+  error: '#DC2626',
   errorLight: '#FEF2F2',
-  success: '#10B981',
-  successLight: '#ECFDF5',
-  warning: '#F59E0B',
+  success: '#16A34A',
+  successLight: '#F0FDF4',
+  warning: '#D97706',
   warningLight: '#FFFBEB',
 
-  // Borders
-  border: '#E5E7EB',
-  borderFocus: '#4F46E5',
+  border: '#E4E4E7',
+  borderFocus: '#111111',
 
-  // Card
   cardBackground: '#FFFFFF',
   cardShadow: '#000000',
 
-  // FAB
-  fabBackground: '#4F46E5',
-  fabShadow: '#4F46E5',
+  fabBackground: '#111111',
+  fabShadow: '#000000',
   fabIcon: '#FFFFFF',
 };
 
 export const DarkTheme = {
   mode: 'dark' as const,
 
-  // Backgrounds
-  background: '#0F0E1A',
-  surface: '#1C1B2E',
-  surfaceSecondary: '#2A2840',
+  background: '#0A0A0A',
+  surface: '#141414',
+  surfaceSecondary: '#1F1F1F',
 
-  // Text
-  textPrimary: '#F0EEFF',
-  textSecondary: '#A9A5C8',
-  textMuted: '#6B6889',
-  textInverse: '#1A1A1A',
+  textPrimary: '#FAFAFA',
+  textSecondary: '#A1A1AA',
+  textMuted: '#52525B',
+  textInverse: '#111111',
 
-  // Brand
-  primary: '#7C74F0',
-  primaryLight: '#2A2840',
-  primaryDark: '#A89FF5',
+  primary: '#FAFAFA',
+  primaryLight: '#1F1F1F',
+  primaryDark: '#FFFFFF',
 
-  // Status
-  error: '#F87171',
-  errorLight: '#2D1515',
-  success: '#34D399',
-  successLight: '#052E1C',
-  warning: '#FBBF24',
-  warningLight: '#2D1F05',
+  error: '#EF4444',
+  errorLight: '#1C0A0A',
+  success: '#22C55E',
+  successLight: '#052E16',
+  warning: '#F59E0B',
+  warningLight: '#1C1107',
 
-  // Borders
-  border: '#2E2C47',
-  borderFocus: '#7C74F0',
+  border: '#27272A',
+  borderFocus: '#FAFAFA',
 
-  // Card
-  cardBackground: '#1C1B2E',
+  cardBackground: '#141414',
   cardShadow: '#000000',
 
-  // FAB
-  fabBackground: '#7C74F0',
-  fabShadow: '#7C74F0',
-  fabIcon: '#FFFFFF',
+  fabBackground: '#FAFAFA',
+  fabShadow: '#000000',
+  fabIcon: '#111111',
 };
 
 export type Theme = typeof LightTheme;
