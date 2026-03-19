@@ -1,4 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -19,9 +21,7 @@ import { useTheme } from '../../context';
 import { RootStackNavigationProp } from '../../navigation';
 import {
   CameraCancelledError,
-  CameraPermissionDeniedError,
-  LocationPermissionDeniedError,
-  getCurrentAddress,
+  getAddressFromCoords,
   openCamera,
   saveEntry,
   sendEntrySavedNotification,
@@ -29,8 +29,58 @@ import {
 import { TravelEntry } from '../../types';
 import { validateEntryWithAlert } from '../../utils';
 
-type SaveStatus = 'idle' | 'capturing' | 'locating' | 'saving';
+type SaveStatus = 'idle' | 'requesting' | 'capturing' | 'locating' | 'saving';
 
+// ─── Camera icon built from RN Views — no SVG dependency ─────────────────────
+const CameraIcon: React.FC<{ color: string }> = ({ color }) => (
+  <View style={{ alignItems: 'center', justifyContent: 'center', gap: 0 }}>
+    {/* Viewfinder bump on top */}
+    <View style={{
+      width: 8, height: 4,
+      borderTopLeftRadius: 2, borderTopRightRadius: 2,
+      borderWidth: 1.5, borderBottomWidth: 0,
+      borderColor: color,
+      alignSelf: 'center',
+      marginBottom: -1,
+      zIndex: 1,
+    }} />
+    {/* Camera body */}
+    <View style={{
+      width: 26, height: 18,
+      borderWidth: 1.5,
+      borderColor: color,
+      borderRadius: 3,
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}>
+      {/* Lens — outer ring */}
+      <View style={{
+        width: 10, height: 10,
+        borderRadius: 5,
+        borderWidth: 1.5,
+        borderColor: color,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        {/* Lens — inner dot */}
+        <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: color }} />
+      </View>
+    </View>
+  </View>
+);
+
+// ─── Permission helpers ───────────────────────────────────────────────────────
+const requestCameraPermission = async (): Promise<boolean> => {
+  const { status } = await ImagePicker.requestCameraPermissionsAsync();
+  return status === 'granted';
+};
+
+const requestLocationPermission = async (): Promise<boolean> => {
+  const { status } = await Location.requestForegroundPermissionsAsync();
+  return status === 'granted';
+};
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 export const AddEntryScreen: React.FC = () => {
   const navigation = useNavigation<RootStackNavigationProp>();
   const { theme } = useTheme();
@@ -42,31 +92,91 @@ export const AddEntryScreen: React.FC = () => {
 
   const isLoading = status !== 'idle';
 
+  // ─── Take photo ─────────────────────────────────────────────────────────────
   const handleTakePhoto = useCallback(async () => {
     if (isLoading) return;
     try {
+      setStatus('requesting');
+
+      const cameraGranted = await requestCameraPermission();
+      if (!cameraGranted) {
+        Alert.alert(
+          'Camera Access Required',
+          'Please allow camera access to take photos for your travel entries.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
       setStatus('capturing');
-      setLocationError(null);
       const { uri } = await openCamera();
       setImageUri(uri);
-      setStatus('locating');
-      const fetched = await getCurrentAddress();
-      setAddress(fetched);
+
+      // Ask user whether to tag location — after photo is taken
+      Alert.alert(
+        'Tag Location?',
+        'Would you like to tag the location for this photo?',
+        [
+          {
+            text: 'Skip',
+            style: 'cancel',
+            onPress: () => {
+              setAddress('No location');
+              setStatus('idle');
+            },
+          },
+          {
+            text: 'Tag Location',
+            style: 'default',
+            onPress: () => fetchLocation(),
+          },
+        ]
+      );
     } catch (err) {
       if (err instanceof CameraCancelledError) {
         // silent
-      } else if (err instanceof CameraPermissionDeniedError) {
-        Alert.alert('Camera Access Required', 'Enable camera access in your device Settings.');
-      } else if (err instanceof LocationPermissionDeniedError) {
-        setLocationError('Location access denied. Address could not be fetched.');
       } else {
         Alert.alert('Error', err instanceof Error ? err.message : 'Could not open camera.');
       }
-    } finally {
       setStatus('idle');
     }
   }, [isLoading]);
 
+  // ─── Fetch location ──────────────────────────────────────────────────────────
+  const fetchLocation = useCallback(async () => {
+    try {
+      setStatus('locating');
+      setLocationError(null);
+
+      const locationGranted = await requestLocationPermission();
+      if (!locationGranted) {
+        setLocationError('Location access denied.');
+        setAddress('No location');
+        Alert.alert(
+          'Location Access Required',
+          'Please allow location access to tag where this photo was taken.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const fetched = await getAddressFromCoords({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      });
+      setAddress(fetched);
+    } catch {
+      setLocationError('Could not fetch location.');
+      setAddress('No location');
+    } finally {
+      setStatus('idle');
+    }
+  }, []);
+
+  // ─── Save ────────────────────────────────────────────────────────────────────
   const handleSave = useCallback(async () => {
     if (!validateEntryWithAlert(imageUri, address)) return;
     try {
@@ -87,6 +197,7 @@ export const AddEntryScreen: React.FC = () => {
     }
   }, [imageUri, address, navigation]);
 
+  // ─── Discard ─────────────────────────────────────────────────────────────────
   const handleDiscard = useCallback(() => {
     if (!imageUri && !address) { navigation.goBack(); return; }
     Alert.alert('Discard entry?', 'Unsaved changes will be lost.', [
@@ -104,11 +215,20 @@ export const AddEntryScreen: React.FC = () => {
     ]);
   }, [imageUri, address, navigation]);
 
-  // Step indicators
+  const getStatusLabel = () => {
+    switch (status) {
+      case 'requesting': return 'Requesting permission...';
+      case 'capturing':  return 'Opening camera...';
+      case 'locating':   return 'Fetching location...';
+      case 'saving':     return 'Saving entry...';
+      default:           return null;
+    }
+  };
+
   const steps = [
-    { label: 'Photo', done: !!imageUri },
+    { label: 'Photo',    done: !!imageUri },
     { label: 'Location', done: !!address },
-    { label: 'Save', done: false },
+    { label: 'Save',     done: false },
   ];
 
   return (
@@ -117,7 +237,7 @@ export const AddEntryScreen: React.FC = () => {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Header */}
+        {/* ── Header — back button left, title centered, spacer right ── */}
         <View style={[styles.header, { borderBottomColor: theme.border }]}>
           <TouchableOpacity
             onPress={handleDiscard}
@@ -128,36 +248,15 @@ export const AddEntryScreen: React.FC = () => {
             <Text style={[styles.backSymbol, { color: theme.textPrimary }]}>←</Text>
           </TouchableOpacity>
 
-          <View style={styles.headerCenter}>
-            <ThemedText variant="h3" style={{ color: theme.textPrimary }}>
-              New Entry
-            </ThemedText>
-          </View>
+          <ThemedText variant="h3" style={[styles.headerTitle, { color: theme.textPrimary }]}>
+            New Entry
+          </ThemedText>
 
-          {/* Save shortcut */}
-          <TouchableOpacity
-            onPress={handleSave}
-            disabled={isLoading || !imageUri || !address}
-            style={[
-              styles.saveChip,
-              {
-                backgroundColor: imageUri && address ? theme.primary : theme.surfaceSecondary,
-                opacity: imageUri && address ? 1 : 0.4,
-              },
-            ]}
-            accessibilityLabel="Save entry"
-          >
-            {status === 'saving' ? (
-              <ActivityIndicator size="small" color={theme.textInverse} />
-            ) : (
-              <Text style={[styles.saveChipText, { color: imageUri && address ? theme.textInverse : theme.textMuted }]}>
-                Save
-              </Text>
-            )}
-          </TouchableOpacity>
+          {/* Spacer — same width as back button to keep title truly centered */}
+          <View style={styles.headerSpacer} />
         </View>
 
-        {/* Step progress */}
+        {/* ── Step progress ── */}
         <View style={[styles.progressBar, { borderBottomColor: theme.border }]}>
           {steps.map((step, i) => (
             <View key={step.label} style={styles.stepItem}>
@@ -172,13 +271,16 @@ export const AddEntryScreen: React.FC = () => {
                   <Text style={[styles.stepCheck, { color: theme.textInverse }]}>✓</Text>
                 )}
               </View>
-              <Text style={[styles.stepLabel, { color: step.done ? theme.textPrimary : theme.textMuted }]}>
+              <Text style={[
+                styles.stepLabel,
+                { color: step.done ? theme.textPrimary : theme.textSecondary },
+              ]}>
                 {step.label}
               </Text>
               {i < steps.length - 1 && (
                 <View style={[
                   styles.stepLine,
-                  { backgroundColor: steps[i].done ? theme.primary : theme.border },
+                  { backgroundColor: step.done ? theme.primary : theme.border },
                 ]} />
               )}
             </View>
@@ -190,9 +292,9 @@ export const AddEntryScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Photo section */}
+          {/* ── Photo section ── */}
           <View style={styles.section}>
-            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>PHOTO</Text>
+            <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>PHOTO</Text>
 
             <TouchableOpacity
               style={[
@@ -200,7 +302,7 @@ export const AddEntryScreen: React.FC = () => {
                 {
                   backgroundColor: theme.surfaceSecondary,
                   borderColor: imageUri ? theme.primary : theme.border,
-                  borderWidth: imageUri ? 1.5 : StyleSheet.hairlineWidth,
+                  borderWidth: imageUri ? 1.5 : 1,
                 },
               ]}
               onPress={handleTakePhoto}
@@ -208,60 +310,53 @@ export const AddEntryScreen: React.FC = () => {
               activeOpacity={0.75}
               accessibilityLabel={imageUri ? 'Retake photo' : 'Take photo'}
             >
-              {status === 'capturing' ? (
+              {status === 'requesting' || status === 'capturing' ? (
                 <View style={styles.photoPlaceholder}>
                   <ActivityIndicator size="large" color={theme.primary} />
-                  <Text style={[styles.photoHint, { color: theme.textMuted }]}>
-                    Opening camera...
+                  <Text style={[styles.photoHint, { color: theme.textSecondary }]}>
+                    {getStatusLabel()}
                   </Text>
                 </View>
               ) : imageUri ? (
                 <>
-                  <Image
-                    source={{ uri: imageUri }}
-                    style={styles.previewImage}
-                    resizeMode="cover"
-                  />
-                  {/* Retake chip */}
+                  <Image source={{ uri: imageUri }} style={styles.previewImage} resizeMode="cover" />
                   <View style={styles.retakeChip}>
                     <Text style={styles.retakeChipText}>⟳  Retake</Text>
                   </View>
                 </>
               ) : (
                 <View style={styles.photoPlaceholder}>
-                  <View style={[styles.cameraIconWrap, { borderColor: theme.border }]}>
-                    <Text style={[styles.cameraSymbol, { color: theme.textMuted }]}>⊡</Text>
+                  <View style={[styles.cameraIconWrap, { borderColor: theme.textSecondary, backgroundColor: theme.surface }]}>
+                    <CameraIcon color={theme.textSecondary} size={28} />
                   </View>
-                  <Text style={[styles.photoLabel, { color: theme.textSecondary }]}>
+                  <Text style={[styles.photoLabel, { color: theme.textPrimary }]}>
                     Tap to take a photo
                   </Text>
-                  <Text style={[styles.photoHint, { color: theme.textMuted }]}>
-                    Location tagged automatically
+                  <Text style={[styles.photoHint, { color: theme.textSecondary }]}>
+                    Camera &amp; location access will be requested
                   </Text>
                 </View>
               )}
             </TouchableOpacity>
           </View>
 
-          {/* Location section */}
+          {/* ── Location section ── */}
           <View style={styles.section}>
-            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>LOCATION</Text>
+            <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>LOCATION</Text>
 
-            <View
-              style={[
-                styles.locationBox,
-                {
-                  backgroundColor: theme.surface,
-                  borderColor: address ? theme.primary : theme.border,
-                  borderWidth: address ? 1.5 : StyleSheet.hairlineWidth,
-                },
-              ]}
-            >
+            <View style={[
+              styles.locationBox,
+              {
+                backgroundColor: theme.surface,
+                borderColor: address && address !== 'No location' ? theme.primary : theme.border,
+                borderWidth: address && address !== 'No location' ? 1.5 : 1,
+              },
+            ]}>
               {status === 'locating' ? (
                 <View style={styles.locationRow}>
                   <ActivityIndicator size="small" color={theme.primary} />
-                  <Text style={[styles.locationText, { color: theme.textMuted }]}>
-                    Detecting location...
+                  <Text style={[styles.locationText, { color: theme.textSecondary }]}>
+                    Fetching location...
                   </Text>
                 </View>
               ) : locationError ? (
@@ -275,8 +370,20 @@ export const AddEntryScreen: React.FC = () => {
                 </View>
               ) : address ? (
                 <View style={styles.locationRow}>
-                  <View style={[styles.locationDot, { backgroundColor: theme.primaryLight }]}>
-                    <Text style={[styles.locationDotSymbol, { color: theme.primary }]}>◎</Text>
+                  <View style={[
+                    styles.locationDot,
+                    {
+                      backgroundColor: address === 'No location'
+                        ? theme.surfaceSecondary
+                        : theme.primaryLight,
+                    },
+                  ]}>
+                    <Text style={[
+                      styles.locationDotSymbol,
+                      { color: address === 'No location' ? theme.textSecondary : theme.primary },
+                    ]}>
+                      {address === 'No location' ? '—' : '◎'}
+                    </Text>
                   </View>
                   <Text style={[styles.locationText, { color: theme.textPrimary, flex: 1 }]}>
                     {address}
@@ -285,17 +392,26 @@ export const AddEntryScreen: React.FC = () => {
               ) : (
                 <View style={styles.locationRow}>
                   <View style={[styles.locationDot, { backgroundColor: theme.surfaceSecondary }]}>
-                    <Text style={[styles.locationDotSymbol, { color: theme.textMuted }]}>◎</Text>
+                    <Text style={[styles.locationDotSymbol, { color: theme.textSecondary }]}>◎</Text>
                   </View>
-                  <Text style={[styles.locationText, { color: theme.textMuted }]}>
-                    Waiting for photo...
+                  <Text style={[styles.locationText, { color: theme.textSecondary }]}>
+                    Take a photo first
                   </Text>
                 </View>
               )}
             </View>
           </View>
 
-          {/* Divider */}
+          {/* Status row */}
+          {isLoading && getStatusLabel() && status !== 'requesting' && status !== 'capturing' && (
+            <View style={styles.statusRow}>
+              <ActivityIndicator size="small" color={theme.textSecondary} />
+              <Text style={[styles.statusText, { color: theme.textSecondary }]}>
+                {getStatusLabel()}
+              </Text>
+            </View>
+          )}
+
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
           {/* Actions */}
@@ -318,7 +434,6 @@ export const AddEntryScreen: React.FC = () => {
               disabled={isLoading}
             />
           </View>
-
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -329,11 +444,10 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1 },
 
-  // Header
+  // Header — back | centered title | spacer
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -346,16 +460,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backSymbol: { fontSize: 18 },
-  headerCenter: { flex: 1, alignItems: 'center' },
-  saveChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: 20,
-    minWidth: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
   },
-  saveChipText: { fontSize: 13, fontWeight: '600', letterSpacing: 0.2 },
+  headerSpacer: { width: 34 }, // mirrors backButton width
 
   // Progress steps
   progressBar: {
@@ -365,7 +474,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: 0,
   },
   stepItem: {
     flexDirection: 'row',
@@ -382,25 +490,12 @@ const styles = StyleSheet.create({
   },
   stepCheck: { fontSize: 11, fontWeight: '700' },
   stepLabel: { fontSize: 11, fontWeight: '500', letterSpacing: 0.3 },
-  stepLine: {
-    width: 28,
-    height: 1,
-    marginHorizontal: 6,
-  },
+  stepLine: { width: 28, height: 1, marginHorizontal: 6 },
 
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 48,
-    gap: 16,
-  },
+  scrollContent: { padding: 20, paddingBottom: 48, gap: 16 },
 
-  // Section
   section: { gap: 8 },
-  sectionLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 1.2,
-  },
+  sectionLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1.4 },
 
   // Photo
   photoArea: {
@@ -413,20 +508,20 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: 12,
+    paddingHorizontal: 24,
   },
   cameraIconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 1,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
   },
-  cameraSymbol: { fontSize: 24 },
-  photoLabel: { fontSize: 14, fontWeight: '500' },
-  photoHint: { fontSize: 12 },
+  photoLabel: { fontSize: 15, fontWeight: '600' },
+  photoHint: { fontSize: 12, textAlign: 'center', lineHeight: 18 },
   previewImage: { width: '100%', height: '100%' },
   retakeChip: {
     position: 'absolute',
@@ -451,11 +546,7 @@ const styles = StyleSheet.create({
     minHeight: 54,
     justifyContent: 'center',
   },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   locationDot: {
     width: 30,
     height: 30,
@@ -467,8 +558,15 @@ const styles = StyleSheet.create({
   locationDotSymbol: { fontSize: 14 },
   locationText: { fontSize: 13, lineHeight: 20 },
 
-  divider: { height: StyleSheet.hairlineWidth, marginVertical: 4 },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 2,
+  },
+  statusText: { fontSize: 13 },
 
-  // Actions
+  divider: { height: StyleSheet.hairlineWidth, marginVertical: 4 },
   actions: { gap: 10 },
 });

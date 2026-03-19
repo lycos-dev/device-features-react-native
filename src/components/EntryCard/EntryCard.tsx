@@ -21,6 +21,28 @@ export interface EntryCardProps {
   theme: Theme;
 }
 
+// Minimalist trash can built from RN Views — no SVG dependency
+const TrashIcon: React.FC<{ color: string }> = ({ color }) => (
+  <View style={{ alignItems: 'center', gap: 1 }}>
+    {/* Lid bar */}
+    <View style={{ width: 14, height: 1.5, backgroundColor: color, borderRadius: 1 }} />
+    {/* Handle bump on lid */}
+    <View style={{ width: 6, height: 1.5, backgroundColor: color, borderRadius: 1, marginTop: -3, marginBottom: 1 }} />
+    {/* Body */}
+    <View style={{
+      width: 12, height: 13,
+      borderLeftWidth: 1.5, borderRightWidth: 1.5, borderBottomWidth: 1.5,
+      borderColor: color, borderBottomLeftRadius: 2, borderBottomRightRadius: 2,
+      flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center',
+      paddingHorizontal: 2,
+    }}>
+      {/* Two inner lines */}
+      <View style={{ width: 1.5, height: 7, backgroundColor: color, borderRadius: 1 }} />
+      <View style={{ width: 1.5, height: 7, backgroundColor: color, borderRadius: 1 }} />
+    </View>
+  </View>
+);
+
 export const EntryCard: React.FC<EntryCardProps> = ({
   id,
   imageUri,
@@ -107,9 +129,8 @@ export const EntryCard: React.FC<EntryCardProps> = ({
           />
         )}
 
-        {/* Bottom row */}
+        {/* Footer row */}
         <View style={[styles.footer, { borderTopColor: theme.border }]}>
-          {/* Info */}
           <View style={styles.info}>
             <View style={styles.row}>
               <Text style={[styles.symbol, { color: theme.primary }]}>◎</Text>
@@ -126,16 +147,16 @@ export const EntryCard: React.FC<EntryCardProps> = ({
             </View>
           </View>
 
-          {/* Delete — red trash symbol */}
+          {/* Delete — SVG trash can, red */}
           <TouchableOpacity
             style={[styles.deleteButton, { borderLeftColor: theme.border }]}
             onPress={handleDelete}
             activeOpacity={0.5}
             accessibilityLabel="Delete entry"
             accessibilityRole="button"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={styles.trashSymbol}>🗑</Text>
+            <TrashIcon color={theme.error} size={18} />
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -155,10 +176,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  image: {
-    width: '100%',
-    height: 210,
-  },
+  image: { width: '100%', height: 210 },
   imageFallback: {
     width: '100%',
     height: 210,
@@ -166,12 +184,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
-  fallbackSymbol: {
-    fontSize: 26,
-  },
-  fallbackText: {
-    fontSize: 13,
-  },
+  fallbackSymbol: { fontSize: 26 },
+  fallbackText: { fontSize: 13 },
   footer: {
     flexDirection: 'row',
     alignItems: 'stretch',
@@ -199,18 +213,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.1,
   },
-  date: {
-    fontSize: 12,
-    letterSpacing: 0.1,
-  },
+  date: { fontSize: 12, letterSpacing: 0.1 },
   deleteButton: {
     paddingHorizontal: 18,
     alignItems: 'center',
     justifyContent: 'center',
     borderLeftWidth: StyleSheet.hairlineWidth,
-  },
-  trashSymbol: {
-    fontSize: 17,
-    color: '#E53E3E',
   },
 });

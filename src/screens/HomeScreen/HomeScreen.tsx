@@ -18,7 +18,7 @@ import { RootStackNavigationProp } from '../../navigation';
 import { deleteEntry, getEntries } from '../../services';
 import { TravelEntry } from '../../types';
 
-// ─── Theme Toggle Switch ──────────────────────────────────────────────────────
+// ─── Theme Toggle ─────────────────────────────────────────────────────────────
 interface ThemeToggleProps {
   isDark: boolean;
   onToggle: () => void;
@@ -26,14 +26,14 @@ interface ThemeToggleProps {
 }
 
 const ThemeToggle: React.FC<ThemeToggleProps> = ({ isDark, onToggle, theme }) => {
-  const translateX = useRef(new Animated.Value(isDark ? 22 : 2)).current;
+  const translateX = useRef(new Animated.Value(isDark ? 30 : 2)).current;
 
   const handlePress = () => {
     Animated.spring(translateX, {
-      toValue: isDark ? 2 : 22,
+      toValue: isDark ? 2 : 30,
       useNativeDriver: true,
-      speed: 20,
-      bounciness: 6,
+      speed: 18,
+      bounciness: 8,
     }).start();
     onToggle();
   };
@@ -41,26 +41,27 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ isDark, onToggle, theme }) =>
   return (
     <TouchableOpacity
       onPress={handlePress}
-      activeOpacity={0.85}
+      activeOpacity={0.9}
       accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       accessibilityRole="switch"
       accessibilityState={{ checked: isDark }}
     >
+      {/* Track */}
       <View
         style={[
           styles.toggleTrack,
           {
             backgroundColor: isDark ? theme.primary : theme.surfaceSecondary,
-            borderColor: theme.border,
+            borderColor: isDark ? theme.primary : theme.border,
           },
         ]}
       >
-        {/* Sun symbol — left side */}
-        <Text style={[styles.toggleIconLeft, { color: isDark ? theme.textMuted : theme.textMuted }]}>
-          ☀
+        {/* Static background icons */}
+        <Text style={[styles.trackIconLeft, { color: isDark ? theme.textInverse : theme.textMuted, opacity: isDark ? 0.5 : 1 }]}>
+          {/* Sun — Unicode circle with rays */}
+          ✦
         </Text>
-        {/* Moon symbol — right side */}
-        <Text style={[styles.toggleIconRight, { color: isDark ? theme.textMuted : theme.textMuted }]}>
+        <Text style={[styles.trackIconRight, { color: isDark ? theme.textMuted : theme.textMuted, opacity: isDark ? 1 : 0.4 }]}>
           ☽
         </Text>
 
@@ -69,14 +70,14 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ isDark, onToggle, theme }) =>
           style={[
             styles.toggleKnob,
             {
-              backgroundColor: theme.surface,
-              shadowColor: theme.cardShadow,
+              backgroundColor: isDark ? theme.surface : '#FFFFFF',
+              shadowColor: '#000',
               transform: [{ translateX }],
             },
           ]}
         >
-          <Text style={[styles.toggleKnobIcon, { color: theme.textPrimary }]}>
-            {isDark ? '☽' : '☀'}
+          <Text style={[styles.knobIcon, { color: theme.textPrimary }]}>
+            {isDark ? '☽' : '✦'}
           </Text>
         </Animated.View>
       </View>
@@ -215,42 +216,42 @@ const styles = StyleSheet.create({
   headerLeft: { gap: 2 },
   entryCount: { fontSize: 12 },
 
-  // Toggle track
+  // Toggle — wider + taller for visibility
   toggleTrack: {
-    width: 52,
-    height: 30,
-    borderRadius: 15,
-    borderWidth: StyleSheet.hairlineWidth,
+    width: 60,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 5,
+    paddingHorizontal: 7,
     overflow: 'hidden',
   },
-  toggleIconLeft: {
-    fontSize: 11,
+  trackIconLeft: {
+    fontSize: 12,
     width: 14,
     textAlign: 'center',
   },
-  toggleIconRight: {
-    fontSize: 11,
+  trackIconRight: {
+    fontSize: 12,
     width: 14,
     textAlign: 'center',
   },
   toggleKnob: {
     position: 'absolute',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  toggleKnobIcon: {
-    fontSize: 11,
+  knobIcon: {
+    fontSize: 13,
   },
 
   listContent: { paddingTop: 8, paddingBottom: 100 },
