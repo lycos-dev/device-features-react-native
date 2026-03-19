@@ -19,10 +19,15 @@ export class CameraCancelledError extends Error {
 }
 
 export const openCamera = async (): Promise<CameraResult> => {
-  // Check current permission status before launching
-  const { status } = await ImagePicker.requestCameraPermissionsAsync();
+  let permissionResult: ImagePicker.CameraPermissionResponse;
 
-  if (status !== 'granted') {
+  try {
+    permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+  } catch {
+    throw new Error('Failed to request camera permissions.');
+  }
+
+  if (permissionResult.status !== 'granted') {
     throw new CameraPermissionDeniedError();
   }
 
@@ -47,8 +52,8 @@ export const openCamera = async (): Promise<CameraResult> => {
 
   const asset = result.assets?.[0];
 
-  if (!asset?.uri) {
-    throw new Error('No image was returned from the camera.');
+  if (!asset?.uri || asset.uri.trim() === '') {
+    throw new Error('No image was returned from the camera. Please try again.');
   }
 
   return { uri: asset.uri };

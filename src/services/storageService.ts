@@ -3,45 +3,56 @@ import { TravelEntry } from '../types';
 
 const STORAGE_KEY = '@travel_diary_entries';
 
+const isValidEntry = (e: unknown): e is TravelEntry =>
+  typeof e === 'object' &&
+  e !== null &&
+  typeof (e as TravelEntry).id === 'string' &&
+  typeof (e as TravelEntry).imageUri === 'string' &&
+  typeof (e as TravelEntry).address === 'string' &&
+  typeof (e as TravelEntry).createdAt === 'string';
+
 export const getEntries = async (): Promise<TravelEntry[]> => {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
-
     if (!raw) return [];
 
     const parsed = JSON.parse(raw);
-
     if (!Array.isArray(parsed)) {
-      console.warn('[StorageService] Stored data is not an array — resetting.');
+      console.warn('[StorageService] Corrupt data detected — resetting storage.');
+      await AsyncStorage.removeItem(STORAGE_KEY);
       return [];
     }
 
-    return parsed as TravelEntry[];
+    // Filter out any malformed entries to prevent crashes
+    const valid = parsed.filter(isValidEntry);
+    if (valid.length !== parsed.length) {
+      console.warn(
+        `[StorageService] Removed ${parsed.length - valid.length} malformed entries.`
+      );
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(valid));
+    }
+
+    return valid;
   } catch (error) {
-    console.error(
-      '[StorageService] Failed to load entries:',
-      error instanceof Error ? error.message : error
-    );
+    console.error('[StorageService] Failed to load entries:', error);
     return [];
   }
 };
 
 export const saveEntry = async (entry: TravelEntry): Promise<void> => {
-  if (!entry.id || !entry.imageUri || !entry.address || !entry.createdAt) {
+  if (!isValidEntry(entry)) {
     throw new Error('Invalid entry: all fields (id, imageUri, address, createdAt) are required.');
   }
 
   try {
     const existing = await getEntries();
 
-    const isDuplicate = existing.some(e => e.id === entry.id);
-    if (isDuplicate) {
+    if (existing.some(e => e.id === entry.id)) {
       throw new Error(`Entry with id "${entry.id}" already exists.`);
     }
 
-    // Prepend new entry so the list shows newest first
+    // Newest first
     const updated = [entry, ...existing];
-
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   } catch (error) {
     if (error instanceof Error) throw error;
@@ -50,20 +61,18 @@ export const saveEntry = async (entry: TravelEntry): Promise<void> => {
 };
 
 export const deleteEntry = async (id: string): Promise<void> => {
-  if (!id || id.trim() === '') {
+  if (!id?.trim()) {
     throw new Error('A valid entry id is required to delete.');
   }
 
   try {
     const existing = await getEntries();
 
-    const entryExists = existing.some(e => e.id === id);
-    if (!entryExists) {
+    if (!existing.some(e => e.id === id)) {
       throw new Error(`Entry with id "${id}" not found.`);
     }
 
     const updated = existing.filter(e => e.id !== id);
-
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   } catch (error) {
     if (error instanceof Error) throw error;
@@ -75,9 +84,6 @@ export const clearAllEntries = async (): Promise<void> => {
   try {
     await AsyncStorage.removeItem(STORAGE_KEY);
   } catch (error) {
-    console.error(
-      '[StorageService] Failed to clear entries:',
-      error instanceof Error ? error.message : error
-    );
+    console.error('[StorageService] Failed to clear entries:', error);
   }
 };

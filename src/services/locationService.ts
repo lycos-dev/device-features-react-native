@@ -19,66 +19,61 @@ export class LocationUnavailableError extends Error {
   }
 }
 
+const LOCATION_TIMEOUT_MS = 10000;
+
 export const getCurrentLocation = async (): Promise<Coordinates> => {
   const { granted } = await Location.requestForegroundPermissionsAsync();
+  if (!granted) throw new LocationPermissionDeniedError();
 
-  if (!granted) {
-    throw new LocationPermissionDeniedError();
-  }
+  // Race location fetch against a timeout to avoid hanging indefinitely
+  const locationPromise = Location.getCurrentPositionAsync({
+    accuracy: Location.Accuracy.Balanced,
+  });
+
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new LocationUnavailableError()), LOCATION_TIMEOUT_MS)
+  );
 
   let location: Location.LocationObject;
-
   try {
-    location = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
-    });
+    location = await Promise.race([locationPromise, timeoutPromise]);
   } catch (error) {
+    if (error instanceof LocationUnavailableError) throw error;
     throw new LocationUnavailableError();
   }
 
   const { latitude, longitude } = location.coords;
-
-  if (!latitude || !longitude) {
-    throw new LocationUnavailableError();
-  }
+  if (latitude == null || longitude == null) throw new LocationUnavailableError();
 
   return { latitude, longitude };
 };
 
 export const getAddressFromCoords = async (coords: Coordinates): Promise<string> => {
   const { latitude, longitude } = coords;
+  const fallback = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
 
   let results: Location.LocationGeocodedAddress[];
-
   try {
     results = await Location.reverseGeocodeAsync({ latitude, longitude });
-  } catch (error) {
-    throw new Error(
-      `Reverse geocoding failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
+  } catch {
+    return fallback;
   }
 
-  if (!results || results.length === 0) {
-    return `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
-  }
+  if (!results?.length) return fallback;
 
   const place = results[0];
-
-  // Build a clean, human-readable address from available fields
-  const parts: string[] = [
+  const parts = [
     place.name,
     place.street,
     place.city,
     place.region,
     place.country,
-  ].filter((part): part is string => Boolean(part && part.trim()));
+  ].filter((p): p is string => Boolean(p?.trim()));
 
-  // Deduplicate consecutive identical parts (e.g. city === name)
-  const deduplicated = parts.filter((part, index) => part !== parts[index - 1]);
+  // Deduplicate consecutive identical parts
+  const deduped = parts.filter((p, i) => p !== parts[i - 1]);
 
-  return deduplicated.length > 0
-    ? deduplicated.join(', ')
-    : `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+  return deduped.length > 0 ? deduped.join(', ') : fallback;
 };
 
 export const getCurrentAddress = async (): Promise<string> => {
