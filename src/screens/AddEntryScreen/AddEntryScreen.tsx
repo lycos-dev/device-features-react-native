@@ -104,6 +104,13 @@ export const AddEntryScreen: React.FC = () => {
     ]);
   }, [imageUri, address, navigation]);
 
+  // Step indicators
+  const steps = [
+    { label: 'Photo', done: !!imageUri },
+    { label: 'Location', done: !!address },
+    { label: 'Save', done: false },
+  ];
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <KeyboardAvoidingView
@@ -115,17 +122,67 @@ export const AddEntryScreen: React.FC = () => {
           <TouchableOpacity
             onPress={handleDiscard}
             disabled={isLoading}
-            style={styles.backButton}
+            style={[styles.backButton, { backgroundColor: theme.surfaceSecondary }]}
             accessibilityLabel="Go back"
           >
             <Text style={[styles.backSymbol, { color: theme.textPrimary }]}>←</Text>
           </TouchableOpacity>
 
-          <ThemedText variant="h3" style={{ color: theme.textPrimary }}>
-            New Entry
-          </ThemedText>
+          <View style={styles.headerCenter}>
+            <ThemedText variant="h3" style={{ color: theme.textPrimary }}>
+              New Entry
+            </ThemedText>
+          </View>
 
-          <View style={styles.headerSpacer} />
+          {/* Save shortcut */}
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={isLoading || !imageUri || !address}
+            style={[
+              styles.saveChip,
+              {
+                backgroundColor: imageUri && address ? theme.primary : theme.surfaceSecondary,
+                opacity: imageUri && address ? 1 : 0.4,
+              },
+            ]}
+            accessibilityLabel="Save entry"
+          >
+            {status === 'saving' ? (
+              <ActivityIndicator size="small" color={theme.textInverse} />
+            ) : (
+              <Text style={[styles.saveChipText, { color: imageUri && address ? theme.textInverse : theme.textMuted }]}>
+                Save
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Step progress */}
+        <View style={[styles.progressBar, { borderBottomColor: theme.border }]}>
+          {steps.map((step, i) => (
+            <View key={step.label} style={styles.stepItem}>
+              <View style={[
+                styles.stepDot,
+                {
+                  backgroundColor: step.done ? theme.primary : theme.surfaceSecondary,
+                  borderColor: step.done ? theme.primary : theme.border,
+                },
+              ]}>
+                {step.done && (
+                  <Text style={[styles.stepCheck, { color: theme.textInverse }]}>✓</Text>
+                )}
+              </View>
+              <Text style={[styles.stepLabel, { color: step.done ? theme.textPrimary : theme.textMuted }]}>
+                {step.label}
+              </Text>
+              {i < steps.length - 1 && (
+                <View style={[
+                  styles.stepLine,
+                  { backgroundColor: steps[i].done ? theme.primary : theme.border },
+                ]} />
+              )}
+            </View>
+          ))}
         </View>
 
         <ScrollView
@@ -133,92 +190,113 @@ export const AddEntryScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Photo section */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>PHOTO</Text>
 
-          {/* Photo area */}
-          <TouchableOpacity
-            style={[
-              styles.photoArea,
-              {
-                backgroundColor: theme.surfaceSecondary,
-                borderColor: imageUri ? 'transparent' : theme.border,
-              },
-            ]}
-            onPress={handleTakePhoto}
-            disabled={isLoading}
-            activeOpacity={0.75}
-            accessibilityLabel={imageUri ? 'Retake photo' : 'Take photo'}
-          >
-            {status === 'capturing' ? (
-              <View style={styles.photoPlaceholder}>
-                <ActivityIndicator size="small" color={theme.textMuted} />
-                <Text style={[styles.photoHint, { color: theme.textMuted }]}>
-                  Opening camera...
-                </Text>
-              </View>
-            ) : imageUri ? (
-              <>
-                <Image
-                  source={{ uri: imageUri }}
-                  style={styles.previewImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.retakeBar}>
-                  <Text style={styles.retakeText}>⟳  Tap to retake</Text>
+            <TouchableOpacity
+              style={[
+                styles.photoArea,
+                {
+                  backgroundColor: theme.surfaceSecondary,
+                  borderColor: imageUri ? theme.primary : theme.border,
+                  borderWidth: imageUri ? 1.5 : StyleSheet.hairlineWidth,
+                },
+              ]}
+              onPress={handleTakePhoto}
+              disabled={isLoading}
+              activeOpacity={0.75}
+              accessibilityLabel={imageUri ? 'Retake photo' : 'Take photo'}
+            >
+              {status === 'capturing' ? (
+                <View style={styles.photoPlaceholder}>
+                  <ActivityIndicator size="large" color={theme.primary} />
+                  <Text style={[styles.photoHint, { color: theme.textMuted }]}>
+                    Opening camera...
+                  </Text>
                 </View>
-              </>
-            ) : (
-              <View style={styles.photoPlaceholder}>
-                <Text style={[styles.cameraSymbol, { color: theme.textMuted }]}>⊡</Text>
-                <Text style={[styles.photoLabel, { color: theme.textSecondary }]}>
-                  Take a photo
-                </Text>
-                <Text style={[styles.photoHint, { color: theme.textMuted }]}>
-                  Location is fetched automatically
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          {/* Location row */}
-          <View style={[styles.locationBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            {status === 'locating' ? (
-              <View style={styles.locationRow}>
-                <ActivityIndicator size="small" color={theme.textMuted} />
-                <Text style={[styles.locationText, { color: theme.textMuted }]}>
-                  Detecting location...
-                </Text>
-              </View>
-            ) : locationError ? (
-              <View style={styles.locationRow}>
-                <Text style={[styles.locationSymbol, { color: theme.error }]}>⊘</Text>
-                <Text style={[styles.locationText, { color: theme.error, flex: 1 }]}>
-                  {locationError}
-                </Text>
-              </View>
-            ) : address ? (
-              <View style={styles.locationRow}>
-                <Text style={[styles.locationSymbol, { color: theme.textMuted }]}>◎</Text>
-                <Text style={[styles.locationText, { color: theme.textPrimary, flex: 1 }]}>
-                  {address}
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.locationRow}>
-                <Text style={[styles.locationSymbol, { color: theme.textMuted }]}>◎</Text>
-                <Text style={[styles.locationText, { color: theme.textMuted }]}>
-                  Address will appear here
-                </Text>
-              </View>
-            )}
+              ) : imageUri ? (
+                <>
+                  <Image
+                    source={{ uri: imageUri }}
+                    style={styles.previewImage}
+                    resizeMode="cover"
+                  />
+                  {/* Retake chip */}
+                  <View style={styles.retakeChip}>
+                    <Text style={styles.retakeChipText}>⟳  Retake</Text>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.photoPlaceholder}>
+                  <View style={[styles.cameraIconWrap, { borderColor: theme.border }]}>
+                    <Text style={[styles.cameraSymbol, { color: theme.textMuted }]}>⊡</Text>
+                  </View>
+                  <Text style={[styles.photoLabel, { color: theme.textSecondary }]}>
+                    Tap to take a photo
+                  </Text>
+                  <Text style={[styles.photoHint, { color: theme.textMuted }]}>
+                    Location tagged automatically
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
           </View>
 
-          {/* Saving status */}
-          {status === 'saving' && (
-            <View style={styles.savingRow}>
-              <ActivityIndicator size="small" color={theme.textMuted} />
-              <Text style={[styles.savingText, { color: theme.textMuted }]}>Saving...</Text>
+          {/* Location section */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>LOCATION</Text>
+
+            <View
+              style={[
+                styles.locationBox,
+                {
+                  backgroundColor: theme.surface,
+                  borderColor: address ? theme.primary : theme.border,
+                  borderWidth: address ? 1.5 : StyleSheet.hairlineWidth,
+                },
+              ]}
+            >
+              {status === 'locating' ? (
+                <View style={styles.locationRow}>
+                  <ActivityIndicator size="small" color={theme.primary} />
+                  <Text style={[styles.locationText, { color: theme.textMuted }]}>
+                    Detecting location...
+                  </Text>
+                </View>
+              ) : locationError ? (
+                <View style={styles.locationRow}>
+                  <View style={[styles.locationDot, { backgroundColor: theme.errorLight }]}>
+                    <Text style={[styles.locationDotSymbol, { color: theme.error }]}>⊘</Text>
+                  </View>
+                  <Text style={[styles.locationText, { color: theme.error, flex: 1 }]}>
+                    {locationError}
+                  </Text>
+                </View>
+              ) : address ? (
+                <View style={styles.locationRow}>
+                  <View style={[styles.locationDot, { backgroundColor: theme.primaryLight }]}>
+                    <Text style={[styles.locationDotSymbol, { color: theme.primary }]}>◎</Text>
+                  </View>
+                  <Text style={[styles.locationText, { color: theme.textPrimary, flex: 1 }]}>
+                    {address}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.locationRow}>
+                  <View style={[styles.locationDot, { backgroundColor: theme.surfaceSecondary }]}>
+                    <Text style={[styles.locationDotSymbol, { color: theme.textMuted }]}>◎</Text>
+                  </View>
+                  <Text style={[styles.locationText, { color: theme.textMuted }]}>
+                    Waiting for photo...
+                  </Text>
+                </View>
+              )}
             </View>
-          )}
+          </View>
+
+          {/* Divider */}
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
           {/* Actions */}
           <View style={styles.actions}>
@@ -251,111 +329,146 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1 },
 
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   backButton: {
-    width: 36,
-    alignItems: 'flex-start',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  backSymbol: {
-    fontSize: 20,
+  backSymbol: { fontSize: 18 },
+  headerCenter: { flex: 1, alignItems: 'center' },
+  saveChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 20,
+    minWidth: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  headerSpacer: { width: 36 },
+  saveChipText: { fontSize: 13, fontWeight: '600', letterSpacing: 0.2 },
+
+  // Progress steps
+  progressBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 0,
+  },
+  stepItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  stepDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepCheck: { fontSize: 11, fontWeight: '700' },
+  stepLabel: { fontSize: 11, fontWeight: '500', letterSpacing: 0.3 },
+  stepLine: {
+    width: 28,
+    height: 1,
+    marginHorizontal: 6,
+  },
 
   scrollContent: {
     padding: 20,
     paddingBottom: 48,
-    gap: 12,
+    gap: 16,
+  },
+
+  // Section
+  section: { gap: 8 },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1.2,
   },
 
   // Photo
   photoArea: {
     width: '100%',
     height: 260,
-    borderRadius: 10,
+    borderRadius: 12,
     overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
   },
   photoPlaceholder: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 10,
   },
-  cameraSymbol: {
-    fontSize: 36,
+  cameraIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 4,
   },
-  photoLabel: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  photoHint: {
-    fontSize: 12,
-  },
-  previewImage: {
-    width: '100%',
-    height: '100%',
-  },
-  retakeBar: {
+  cameraSymbol: { fontSize: 24 },
+  photoLabel: { fontSize: 14, fontWeight: '500' },
+  photoHint: { fontSize: 12 },
+  previewImage: { width: '100%', height: '100%' },
+  retakeChip: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingVertical: 10,
-    alignItems: 'center',
+    bottom: 12,
+    right: 12,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
-  retakeText: {
+  retakeChipText: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
     letterSpacing: 0.3,
   },
 
   // Location
   locationBox: {
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-    minHeight: 50,
+    minHeight: 54,
     justifyContent: 'center',
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
-  locationSymbol: {
-    fontSize: 14,
-  },
-  locationText: {
-    fontSize: 13,
-    lineHeight: 20,
-  },
-
-  // Saving
-  savingRow: {
-    flexDirection: 'row',
+  locationDot: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 4,
+    flexShrink: 0,
   },
-  savingText: {
-    fontSize: 13,
-  },
+  locationDotSymbol: { fontSize: 14 },
+  locationText: { fontSize: 13, lineHeight: 20 },
+
+  divider: { height: StyleSheet.hairlineWidth, marginVertical: 4 },
 
   // Actions
-  actions: {
-    gap: 10,
-    marginTop: 8,
-  },
+  actions: { gap: 10 },
 });

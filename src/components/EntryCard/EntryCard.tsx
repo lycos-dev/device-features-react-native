@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import {
   Alert,
+  Animated,
   Image,
   StyleSheet,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 
@@ -28,6 +30,7 @@ export const EntryCard: React.FC<EntryCardProps> = ({
   theme,
 }) => {
   const [imageError, setImageError] = useState(false);
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
 
   const formattedDate = (() => {
     try {
@@ -43,6 +46,24 @@ export const EntryCard: React.FC<EntryCardProps> = ({
     }
   })();
 
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.974,
+      useNativeDriver: true,
+      speed: 40,
+      bounciness: 4,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 40,
+      bounciness: 4,
+    }).start();
+  };
+
   const handleDelete = () => {
     Alert.alert(
       'Delete Entry',
@@ -55,91 +76,112 @@ export const EntryCard: React.FC<EntryCardProps> = ({
   };
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.cardBackground, shadowColor: theme.cardShadow }]}>
-      {/* Photo */}
-      {imageError ? (
-        <View style={[styles.imageFallback, { backgroundColor: theme.surfaceSecondary, borderBottomWidth: 1, borderBottomColor: theme.border }]}>
-          <Text style={[styles.fallbackIcon, { color: theme.textMuted }]}>⊘</Text>
-          <Text style={[styles.fallbackText, { color: theme.textMuted }]}>Image unavailable</Text>
-        </View>
-      ) : (
-        <Image
-          source={{ uri: imageUri }}
-          style={styles.image}
-          resizeMode="cover"
-          onError={() => setImageError(true)}
-        />
-      )}
-
-      {/* Content row */}
-      <View style={[styles.content, { borderTopWidth: 1, borderTopColor: theme.border }]}>
-        <View style={styles.info}>
-          {/* Address */}
-          <View style={styles.row}>
-            <Text style={[styles.symbol, { color: theme.textMuted }]}>◎</Text>
-            <Text style={[styles.address, { color: theme.textPrimary }]} numberOfLines={1}>
-              {address || 'Unknown location'}
-            </Text>
+    <TouchableWithoutFeedback
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      onPress={() => {}}
+    >
+      <Animated.View
+        style={[
+          styles.card,
+          {
+            backgroundColor: theme.cardBackground,
+            shadowColor: theme.cardShadow,
+            borderColor: theme.border,
+            transform: [{ scale: scaleAnim }],
+          },
+        ]}
+      >
+        {/* Photo */}
+        {imageError ? (
+          <View style={[styles.imageFallback, { backgroundColor: theme.surfaceSecondary }]}>
+            <Text style={[styles.fallbackSymbol, { color: theme.textMuted }]}>⊘</Text>
+            <Text style={[styles.fallbackText, { color: theme.textMuted }]}>Image unavailable</Text>
           </View>
-          {/* Date */}
-          <View style={styles.row}>
-            <Text style={[styles.symbol, { color: theme.textMuted }]}>◷</Text>
-            <Text style={[styles.date, { color: theme.textMuted }]}>{formattedDate}</Text>
-          </View>
-        </View>
+        ) : (
+          <Image
+            source={{ uri: imageUri }}
+            style={styles.image}
+            resizeMode="cover"
+            onError={() => setImageError(true)}
+          />
+        )}
 
-        {/* Delete */}
-        <TouchableOpacity
-          style={[styles.deleteButton, { borderLeftWidth: 1, borderLeftColor: theme.border }]}
-          onPress={handleDelete}
-          accessibilityLabel="Delete entry"
-          accessibilityRole="button"
-          activeOpacity={0.6}
-        >
-          <Text style={[styles.deleteSymbol, { color: theme.textMuted }]}>⊗</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+        {/* Bottom row */}
+        <View style={[styles.footer, { borderTopColor: theme.border }]}>
+          {/* Info */}
+          <View style={styles.info}>
+            <View style={styles.row}>
+              <Text style={[styles.symbol, { color: theme.primary }]}>◎</Text>
+              <Text
+                style={[styles.address, { color: theme.textPrimary }]}
+                numberOfLines={1}
+              >
+                {address || 'Unknown location'}
+              </Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={[styles.symbol, { color: theme.textMuted }]}>◷</Text>
+              <Text style={[styles.date, { color: theme.textMuted }]}>{formattedDate}</Text>
+            </View>
+          </View>
+
+          {/* Delete — red trash symbol */}
+          <TouchableOpacity
+            style={[styles.deleteButton, { borderLeftColor: theme.border }]}
+            onPress={handleDelete}
+            activeOpacity={0.5}
+            accessibilityLabel="Delete entry"
+            accessibilityRole="button"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.trashSymbol}>🗑</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+    </TouchableWithoutFeedback>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 12,
+    borderRadius: 14,
     marginHorizontal: 16,
-    marginVertical: 6,
+    marginVertical: 7,
     overflow: 'hidden',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 3,
   },
   image: {
     width: '100%',
-    height: 220,
+    height: 210,
   },
   imageFallback: {
     width: '100%',
-    height: 220,
+    height: 210,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
-  fallbackIcon: {
-    fontSize: 28,
+  fallbackSymbol: {
+    fontSize: 26,
   },
   fallbackText: {
     fontSize: 13,
   },
-  content: {
+  footer: {
     flexDirection: 'row',
     alignItems: 'stretch',
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   info: {
     flex: 1,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    gap: 4,
+    gap: 5,
   },
   row: {
     flexDirection: 'row',
@@ -154,18 +196,21 @@ const styles = StyleSheet.create({
   address: {
     flex: 1,
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '600',
     letterSpacing: 0.1,
   },
   date: {
     fontSize: 12,
+    letterSpacing: 0.1,
   },
   deleteButton: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    borderLeftWidth: StyleSheet.hairlineWidth,
   },
-  deleteSymbol: {
-    fontSize: 18,
+  trashSymbol: {
+    fontSize: 17,
+    color: '#E53E3E',
   },
 });

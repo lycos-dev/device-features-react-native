@@ -1,8 +1,9 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   FlatList,
   StyleSheet,
   Text,
@@ -17,6 +18,73 @@ import { RootStackNavigationProp } from '../../navigation';
 import { deleteEntry, getEntries } from '../../services';
 import { TravelEntry } from '../../types';
 
+// ─── Theme Toggle Switch ──────────────────────────────────────────────────────
+interface ThemeToggleProps {
+  isDark: boolean;
+  onToggle: () => void;
+  theme: ReturnType<typeof useTheme>['theme'];
+}
+
+const ThemeToggle: React.FC<ThemeToggleProps> = ({ isDark, onToggle, theme }) => {
+  const translateX = useRef(new Animated.Value(isDark ? 22 : 2)).current;
+
+  const handlePress = () => {
+    Animated.spring(translateX, {
+      toValue: isDark ? 2 : 22,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 6,
+    }).start();
+    onToggle();
+  };
+
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.85}
+      accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: isDark }}
+    >
+      <View
+        style={[
+          styles.toggleTrack,
+          {
+            backgroundColor: isDark ? theme.primary : theme.surfaceSecondary,
+            borderColor: theme.border,
+          },
+        ]}
+      >
+        {/* Sun symbol — left side */}
+        <Text style={[styles.toggleIconLeft, { color: isDark ? theme.textMuted : theme.textMuted }]}>
+          ☀
+        </Text>
+        {/* Moon symbol — right side */}
+        <Text style={[styles.toggleIconRight, { color: isDark ? theme.textMuted : theme.textMuted }]}>
+          ☽
+        </Text>
+
+        {/* Sliding knob */}
+        <Animated.View
+          style={[
+            styles.toggleKnob,
+            {
+              backgroundColor: theme.surface,
+              shadowColor: theme.cardShadow,
+              transform: [{ translateX }],
+            },
+          ]}
+        >
+          <Text style={[styles.toggleKnobIcon, { color: theme.textPrimary }]}>
+            {isDark ? '☽' : '☀'}
+          </Text>
+        </Animated.View>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+// ─── HomeScreen ───────────────────────────────────────────────────────────────
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<RootStackNavigationProp>();
   const { theme, isDark, toggleTheme } = useTheme();
@@ -83,17 +151,7 @@ export const HomeScreen: React.FC = () => {
           )}
         </View>
 
-        {/* Theme toggle */}
-        <TouchableOpacity
-          onPress={toggleTheme}
-          style={[styles.iconButton, { borderColor: theme.border }]}
-          accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-          accessibilityRole="button"
-        >
-          <Text style={[styles.toggleSymbol, { color: theme.textSecondary }]}>
-            {isDark ? '○' : '●'}
-          </Text>
-        </TouchableOpacity>
+        <ThemeToggle isDark={isDark} onToggle={toggleTheme} theme={theme} />
       </View>
 
       {/* Body */}
@@ -129,7 +187,7 @@ export const HomeScreen: React.FC = () => {
 
       {/* FAB */}
       <TouchableOpacity
-        style={[styles.fab, { backgroundColor: theme.fabBackground }]}
+        style={[styles.fab, { backgroundColor: theme.fabBackground, shadowColor: theme.fabShadow }]}
         onPress={() => navigation.navigate('AddEntry')}
         activeOpacity={0.8}
         accessibilityLabel="Add new travel entry"
@@ -144,6 +202,7 @@ export const HomeScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -153,23 +212,47 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  headerLeft: {
-    gap: 2,
-  },
-  entryCount: {
-    fontSize: 12,
-  },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  headerLeft: { gap: 2 },
+  entryCount: { fontSize: 12 },
+
+  // Toggle track
+  toggleTrack: {
+    width: 52,
+    height: 30,
+    borderRadius: 15,
     borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 5,
+    overflow: 'hidden',
+  },
+  toggleIconLeft: {
+    fontSize: 11,
+    width: 14,
+    textAlign: 'center',
+  },
+  toggleIconRight: {
+    fontSize: 11,
+    width: 14,
+    textAlign: 'center',
+  },
+  toggleKnob: {
+    position: 'absolute',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  toggleSymbol: {
-    fontSize: 14,
+  toggleKnobIcon: {
+    fontSize: 11,
   },
+
   listContent: { paddingTop: 8, paddingBottom: 100 },
   emptyContainer: { flex: 1 },
   centered: {
@@ -179,9 +262,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 32,
   },
-  errorSymbol: {
-    fontSize: 28,
-  },
+  errorSymbol: { fontSize: 28 },
   retryButton: {
     marginTop: 4,
     paddingHorizontal: 20,
@@ -189,10 +270,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  retryText: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
+  retryText: { fontSize: 13, fontWeight: '500' },
+
   fab: {
     position: 'absolute',
     bottom: 28,
@@ -202,9 +281,8 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.25,
     shadowRadius: 6,
     elevation: 6,
   },
