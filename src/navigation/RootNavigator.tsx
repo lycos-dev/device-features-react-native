@@ -24,8 +24,6 @@ export const RootNavigator: React.FC = () => {
         headerShown: false,
         contentStyle: { backgroundColor: theme.background },
         animation: 'slide_from_right',
-        statusBarStyle: isDark ? 'light' : 'dark',
-        statusBarColor: theme.background,
       }}
     >
       <Stack.Screen name="Home" component={HomeScreen} />

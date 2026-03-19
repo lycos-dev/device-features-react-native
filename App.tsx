@@ -1,5 +1,5 @@
 import { NavigationContainer } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from 'expo-status-bar';  // ← must be expo-status-bar
 import React from 'react';
 
 import { ThemeProvider, useTheme } from './src/context';
