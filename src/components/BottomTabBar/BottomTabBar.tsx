@@ -242,7 +242,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
       >
         {/* Notch cutout */}
         <View
-          style={[styles.notchOuter, { backgroundColor: theme.background }]}
+          style={[styles.notchOuter, { backgroundColor: theme.surface }]}
         >
           <View
             style={[styles.notchInner, { backgroundColor: theme.surface }]}
@@ -336,21 +336,21 @@ const styles = StyleSheet.create({
     overflow: "visible",
   },
   notchOuter: {
-    position: "absolute",
-    top: -(NOTCH_RADIUS + 6),
-    alignSelf: "center",
-    width: (NOTCH_RADIUS + 8) * 2,
-    height: (NOTCH_RADIUS + 8) * 2,
-    borderRadius: NOTCH_RADIUS + 8,
-  },
-  notchInner: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    right: 10,
-    bottom: -20,
-    borderRadius: NOTCH_RADIUS,
-  },
+  position: 'absolute',
+  top: -(NOTCH_RADIUS - 2),
+  alignSelf: 'center',
+  width: (NOTCH_RADIUS + 8) * 2,
+  height: (NOTCH_RADIUS + 8) * 2 + 20,  // ← add + 20
+  borderRadius: NOTCH_RADIUS + 8,
+},
+notchInner: {
+  position: 'absolute',
+  top: 10,
+  left: 10,
+  right: 10,
+  bottom: -40,  // ← change from -20 to -40
+  borderRadius: NOTCH_RADIUS,
+},
   tabRow: {
     height: BAR_HEIGHT,
     flexDirection: "row",
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-end",
     height: BAR_HEIGHT,
-    paddingBottom: 7,
+    paddingBottom: 10,
   },
   tabContent: {
     alignItems: "center",
