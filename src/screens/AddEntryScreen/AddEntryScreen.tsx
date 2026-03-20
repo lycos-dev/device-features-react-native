@@ -90,8 +90,7 @@ export const AddEntryScreen: React.FC = () => {
 
   const isLoading = status !== 'idle';
 
-  // ─── Reset screen state when navigating away without saving ──────────────
-  // Requirement: "it will clear that travel entry screen upon going back to it"
+  // ─── Reset screen when navigating away without saving ────────────────────
   useFocusEffect(
     useCallback(() => {
       return () => {
@@ -192,7 +191,10 @@ export const AddEntryScreen: React.FC = () => {
               setLocationError(null);
               setLocationPermissionBlocked(false);
               setLocationPermissionGranted(false);
-              navigation.navigate('Tabs', { screen: 'Settings' } as any);
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Tabs', params: { screen: 'Settings' } }],
+              });
             },
           },
         ],

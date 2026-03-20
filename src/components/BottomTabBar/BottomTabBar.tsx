@@ -285,7 +285,17 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
         pointerEvents="box-none"
       >
         <TouchableWithoutFeedback
-          onPress={() => navigation.navigate("AddEntry" as never)}
+          onPress={() => {
+            // Reset the stack to Tabs first, then push AddEntry once.
+            // This prevents multiple AddEntry screens stacking on repeated taps.
+            navigation.reset({
+              index: 1,
+              routes: [
+                { name: 'Tabs' as never },
+                { name: 'AddEntry' as never },
+              ],
+            });
+          }}
           onPressIn={handleFabPressIn}
           onPressOut={handleFabPressOut}
           accessibilityLabel="Add new travel entry"
