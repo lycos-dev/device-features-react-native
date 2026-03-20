@@ -86,15 +86,36 @@ export const AddEntryScreen: React.FC = () => {
 
   // ─── Open camera modal ────────────────────────────────────────────────────
   const handleOpenCamera = useCallback(async () => {
-    const granted = cameraPermission?.granted;
-    if (!granted) {
-      const result = await requestCameraPermission();
-      if (!result.granted) {
-        Alert.alert('Camera Access Required', 'Please allow camera access in Settings.');
-        return;
-      }
+    // Already granted — open straight away
+    if (cameraPermission?.granted) {
+      setShowCamera(true);
+      return;
     }
-    setShowCamera(true);
+
+    // Never asked yet — show the native iOS system permission dialog
+    if (cameraPermission?.canAskAgain !== false) {
+      const result = await requestCameraPermission();
+      if (result.granted) {
+        setShowCamera(true);
+      } else {
+        // User just denied — show a plain message, do NOT call
+        // Linking.openSettings(). Opening Settings causes iOS to kill
+        // the Expo Go process when camera permission is changed there.
+        Alert.alert(
+          'Camera Access Required',
+          'Please go to Settings > Privacy & Security > Camera > Expo Go and enable access.',
+          [{ text: 'OK' }],
+        );
+      }
+      return;
+    }
+
+    // Permanently denied — same plain message, no Settings link
+    Alert.alert(
+      'Camera Access Required',
+      'Please go to Settings > Privacy & Security > Camera > Expo Go and enable access.',
+      [{ text: 'OK' }],
+    );
   }, [cameraPermission, requestCameraPermission]);
 
   // ─── Take photo ───────────────────────────────────────────────────────────

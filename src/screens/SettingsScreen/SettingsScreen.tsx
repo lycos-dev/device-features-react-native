@@ -1,4 +1,3 @@
-import { useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -116,7 +115,6 @@ export const SettingsScreen: React.FC = () => {
   const { theme, isDark, toggleTheme } = useTheme();
   const themeTranslateX = useRef(new Animated.Value(isDark ? 30 : 2)).current;
 
-  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [locationGranted, setLocationGranted] = useState(false);
   const [notifEnabled, setNotifEnabled] = useState(false);
   const [systemNotifGranted, setSystemNotifGranted] = useState(false);
@@ -179,32 +177,6 @@ export const SettingsScreen: React.FC = () => {
     toggleTheme();
   }, [isDark, toggleTheme]);
 
-  // ─── Camera toggle ────────────────────────────────────────────────────────
-  const handleCameraToggle = useCallback(async () => {
-    if (cameraPermission?.granted) {
-      Alert.alert(
-        'Camera Permission',
-        'To revoke camera access, go to your device Settings.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Settings', onPress: openDeviceSettings },
-        ]
-      );
-      return;
-    }
-    if (cameraPermission?.canAskAgain) {
-      await requestCameraPermission();
-    } else {
-      Alert.alert(
-        'Camera Permission Required',
-        'Camera access is blocked. Open Settings to enable it.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Settings', onPress: openDeviceSettings },
-        ]
-      );
-    }
-  }, [cameraPermission, requestCameraPermission]);
 
   // ─── Location toggle ──────────────────────────────────────────────────────
   const handleLocationToggle = useCallback(async () => {
@@ -268,15 +240,6 @@ export const SettingsScreen: React.FC = () => {
   }, [notifEnabled, systemNotifGranted]);
 
   // ─── Subtitles ────────────────────────────────────────────────────────────
-  const cameraGranted = cameraPermission?.granted ?? false;
-  const cameraSubtitle = !cameraPermission
-    ? 'Loading...'
-    : cameraGranted
-    ? 'Access granted'
-    : cameraPermission.canAskAgain
-    ? 'Tap to grant access'
-    : 'Blocked — tap to open Settings';
-
   const locationSubtitle = locationGranted
     ? 'Access granted'
     : 'Tap to grant access';
@@ -320,21 +283,6 @@ export const SettingsScreen: React.FC = () => {
           PERMISSIONS
         </Text>
         <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <SettingsRow
-            icon="⊙"
-            title="Camera"
-            subtitle={cameraSubtitle}
-            theme={theme}
-            onPress={!cameraGranted ? handleCameraToggle : undefined}
-            right={
-              <Toggle
-                value={cameraGranted}
-                onToggle={handleCameraToggle}
-                theme={theme}
-                disabled={!cameraPermission}
-              />
-            }
-          />
           <SettingsRow
             icon="◎"
             title="Location"

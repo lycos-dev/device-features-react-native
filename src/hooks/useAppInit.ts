@@ -69,7 +69,7 @@ export const useAppInit = (): AppInitState => {
 
     // Re-check system permission when app returns to foreground
     const handleAppStateChange = async (nextState: AppStateStatus) => {
-      if (appStateRef.current.match(/inactive|background/) && nextState === 'active') {
+      if (appStateRef.current === 'background' && nextState === 'active') {
         await requestPermission();
       }
       appStateRef.current = nextState;
