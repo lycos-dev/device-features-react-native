@@ -106,30 +106,14 @@ export const AddEntryScreen: React.FC = () => {
         setShowCamera(false);
         setTorchOn(false);
         setImageUri(result.uri);
-        askForLocation();
+        fetchLocation();
       }
     } catch {
       Alert.alert('Error', 'Failed to capture photo.');
     }
   }, []);
 
-  // ─── Ask location ─────────────────────────────────────────────────────────
-  const askForLocation = useCallback(() => {
-    Alert.alert(
-      'Tag Location?',
-      'Would you like to tag the location for this photo?',
-      [
-        {
-          text: 'Skip',
-          style: 'cancel',
-          onPress: () => { setAddress('No location'); setStatus('idle'); },
-        },
-        { text: 'Tag Location', onPress: () => fetchLocation() },
-      ]
-    );
-  }, []);
-
-  // ─── Fetch location ───────────────────────────────────────────────────────
+  // ─── Fetch location automatically ─────────────────────────────────────────
   const fetchLocation = useCallback(async () => {
     try {
       setStatus('locating');
@@ -446,7 +430,7 @@ export const AddEntryScreen: React.FC = () => {
               </View>
             </View>
 
-            {/* Camera footer — no gallery, centered capture button */}
+            {/* Camera footer */}
             <View style={styles.cameraFooter}>
               <View style={styles.cameraActionCol} />
               <View style={styles.captureCol}>

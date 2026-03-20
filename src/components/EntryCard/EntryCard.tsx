@@ -132,11 +132,8 @@ export const EntryCard: React.FC<EntryCardProps> = ({
           />
         )}
 
-        {/* ── Gradient overlay — simulated with stacked Views ── */}
+        {/* ── Gradient overlay ── */}
         <View style={styles.gradientOverlay}>
-          {/* Top layer — very subtle dark for delete button visibility */}
-          <View style={styles.gradientTop} />
-          {/* Bottom layer — stronger dark for text readability */}
           <View style={styles.gradientBottom} />
         </View>
 
@@ -201,13 +198,8 @@ const styles = StyleSheet.create({
   fallbackSymbol: { fontSize: 32 },
   fallbackText: { fontSize: 13 },
 
-  // Gradient simulation — two overlapping semi-transparent layers
   gradientOverlay: {
     ...StyleSheet.absoluteFillObject,
-  },
-  gradientTop: {
-    display: 'none',
-    height: 0,
   },
   gradientBottom: {
     position: 'absolute',
@@ -218,7 +210,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.62)',
   },
 
-  // Top row — delete button top-right
   topRow: {
     position: 'absolute',
     top: 14,
@@ -235,7 +226,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.2)',
   },
 
-  // Bottom row — text info
   bottomRow: {
     position: 'absolute',
     bottom: 0,
@@ -267,6 +257,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(255,255,255,0.65)',
     letterSpacing: 0.2,
-    marginLeft: 19, // align with address text (after the ◎ icon)
+    marginLeft: 19,
   },
 });

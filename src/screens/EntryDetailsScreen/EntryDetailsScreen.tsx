@@ -5,8 +5,7 @@ import {
   Animated,
   Dimensions,
   Image,
-  ScrollView,
-  StatusBar,
+  LayoutChangeEvent,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -21,65 +20,44 @@ import { deleteEntry } from "../../services";
 type EntryDetailsRouteProp = RouteProp<RootStackParamList, "EntryDetails">;
 
 const { width: W, height: H } = Dimensions.get("window");
-const IMAGE_HEIGHT = H * 0.52; // fallback, overridden by actual ratio
 
 // ─── Trash icon ───────────────────────────────────────────────────────────────
 const TrashIcon: React.FC<{ color: string }> = ({ color }) => (
   <View style={{ alignItems: "center", gap: 1 }}>
-    <View
-      style={{
-        width: 14,
-        height: 1.5,
-        backgroundColor: color,
-        borderRadius: 1,
-      }}
-    />
-    <View
-      style={{
-        width: 6,
-        height: 1.5,
-        backgroundColor: color,
-        borderRadius: 1,
-        marginTop: -3,
-        marginBottom: 1,
-      }}
-    />
-    <View
-      style={{
-        width: 12,
-        height: 13,
-        borderLeftWidth: 1.5,
-        borderRightWidth: 1.5,
-        borderBottomWidth: 1.5,
-        borderColor: color,
-        borderBottomLeftRadius: 2,
-        borderBottomRightRadius: 2,
-        flexDirection: "row",
-        justifyContent: "space-evenly",
-        alignItems: "center",
-        paddingHorizontal: 2,
-      }}
-    >
-      <View
-        style={{
-          width: 1.5,
-          height: 7,
-          backgroundColor: color,
-          borderRadius: 1,
-        }}
-      />
-      <View
-        style={{
-          width: 1.5,
-          height: 7,
-          backgroundColor: color,
-          borderRadius: 1,
-        }}
-      />
+    <View style={{ width: 14, height: 1.5, backgroundColor: color, borderRadius: 1 }} />
+    <View style={{ width: 6, height: 1.5, backgroundColor: color, borderRadius: 1, marginTop: -3, marginBottom: 1 }} />
+    <View style={{
+      width: 12, height: 13,
+      borderLeftWidth: 1.5, borderRightWidth: 1.5, borderBottomWidth: 1.5,
+      borderColor: color, borderBottomLeftRadius: 2, borderBottomRightRadius: 2,
+      flexDirection: "row", justifyContent: "space-evenly", alignItems: "center",
+      paddingHorizontal: 2,
+    }}>
+      <View style={{ width: 1.5, height: 7, backgroundColor: color, borderRadius: 1 }} />
+      <View style={{ width: 1.5, height: 7, backgroundColor: color, borderRadius: 1 }} />
     </View>
   </View>
 );
 
+// ─── Detail row ───────────────────────────────────────────────────────────────
+const DetailRow: React.FC<{
+  label: string;
+  value: string;
+  theme: ReturnType<typeof useTheme>["theme"];
+  icon?: string;
+}> = ({ label, value, theme, icon }) => (
+  <View style={styles.detailRow}>
+    <View style={[styles.detailIconWrap, { backgroundColor: theme.surfaceSecondary }]}>
+      <Text style={[styles.detailIcon, { color: theme.textSecondary }]}>{icon ?? "◈"}</Text>
+    </View>
+    <View style={styles.detailText}>
+      <Text style={[styles.detailLabel, { color: theme.textMuted }]}>{label}</Text>
+      <Text style={[styles.detailValue, { color: theme.textPrimary }]}>{value}</Text>
+    </View>
+  </View>
+);
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 export const EntryDetailsScreen: React.FC = () => {
   const navigation = useNavigation<RootStackNavigationProp>();
   const route = useRoute<EntryDetailsRouteProp>();
@@ -87,30 +65,45 @@ export const EntryDetailsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
 
   const { entry } = route.params;
+
   const [imageError, setImageError] = useState(false);
-  const [imageHeight, setImageHeight] = useState(H * 0.52);
-  const [titleBarHeight, setTitleBarHeight] = useState(100);
+  const [isLandscape, setIsLandscape] = useState(false);
+
+  // Measure the bottom block (headline + hint) so gradient matches it exactly
+  const [bottomBlockHeight, setBottomBlockHeight] = useState(160);
+
+  // Measure the details panel actual content height to set proper scroll limit
+  const [panelContentHeight, setPanelContentHeight] = useState(H);
+
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  // Back button fades from white → themed as user scrolls past image
+  const TRIGGER = H * 0.3;
+
+  // ─── Button animations ────────────────────────────────────────────────────
   const btnBg = scrollY.interpolate({
-    inputRange: [0, IMAGE_HEIGHT * 0.5],
-    outputRange: ["rgba(0,0,0,0.38)", theme.surfaceSecondary],
+    inputRange: [0, TRIGGER],
+    outputRange: ["rgba(0,0,0,0.45)", theme.surface],
     extrapolate: "clamp",
   });
-  const btnTextColor = scrollY.interpolate({
-    inputRange: [0, IMAGE_HEIGHT * 0.5],
+  const btnContentColor = scrollY.interpolate({
+    inputRange: [0, TRIGGER],
     outputRange: ["#FFFFFF", theme.textPrimary],
     extrapolate: "clamp",
   });
-
-  // Title bar slides up from bottom of image on scroll
-  const titleBarY = scrollY.interpolate({
-    inputRange: [0, IMAGE_HEIGHT],
-    outputRange: [0, -12],
+  const btnBorderColor = scrollY.interpolate({
+    inputRange: [0, TRIGGER],
+    outputRange: ["rgba(255,255,255,0)", theme.border],
     extrapolate: "clamp",
   });
 
+  // Swipe hint fades out as user starts scrolling
+  const hintOpacity = scrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [1, 0],
+    extrapolate: "clamp",
+  });
+
+  // ─── Date formatting ──────────────────────────────────────────────────────
   const formattedDate = (() => {
     try {
       const d = new Date(entry.createdAt);
@@ -136,6 +129,7 @@ export const EntryDetailsScreen: React.FC = () => {
     }
   })();
 
+  // ─── Delete ───────────────────────────────────────────────────────────────
   const handleDelete = () => {
     Alert.alert("Delete Entry", "This entry will be permanently removed.", [
       { text: "Cancel", style: "cancel" },
@@ -149,7 +143,7 @@ export const EntryDetailsScreen: React.FC = () => {
           } catch (err) {
             Alert.alert(
               "Delete Failed",
-              err instanceof Error ? err.message : "Could not delete.",
+              err instanceof Error ? err.message : "Could not delete."
             );
           }
         },
@@ -157,189 +151,197 @@ export const EntryDetailsScreen: React.FC = () => {
     ]);
   };
 
-  return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <StatusBar barStyle="light-content" />
+  const handleImageLoad = (e: any) => {
+    const { width: iw, height: ih } = e.nativeEvent.source;
+    setIsLandscape(iw > ih);
+  };
 
+  const handleBottomBlockLayout = (e: LayoutChangeEvent) => {
+    // Add a small buffer above the block so gradient starts just before the date
+    setBottomBlockHeight(e.nativeEvent.layout.height + 24);
+  };
+
+  const handlePanelLayout = (e: LayoutChangeEvent) => {
+    setPanelContentHeight(e.nativeEvent.layout.height);
+  };
+
+  return (
+    <View style={[styles.container, { backgroundColor: "#000" }]}>
       <Animated.ScrollView
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false },
+          { useNativeDriver: false }
         )}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         bounces={false}
+        decelerationRate="fast"
+        // Max scroll = photo height + panel content - screen height + safe bottom margin
+        // This ensures scrolling stops right at the REF bottom with margin
+        contentInset={{ bottom: 0 }}
       >
-        {/* ── Hero image ── */}
-        <View style={styles.imageContainer}>
+        {/* ── Full-screen photo ── */}
+        <View style={styles.photoSection}>
           {imageError ? (
-            <View
-              style={[
-                styles.imageFallback,
-                { backgroundColor: theme.surfaceSecondary },
-              ]}
-            >
-              <Text style={[styles.fallbackSymbol, { color: theme.textMuted }]}>
-                ⊘
-              </Text>
-              <Text style={[styles.fallbackText, { color: theme.textMuted }]}>
-                Image unavailable
-              </Text>
+            <View style={styles.imageFallback}>
+              <Text style={styles.fallbackSymbol}>⊘</Text>
+              <Text style={styles.fallbackText}>Image unavailable</Text>
             </View>
           ) : (
             <Image
               source={{ uri: entry.imageUri }}
-              style={[styles.image, { height: imageHeight }]}
-              resizeMode="cover"
-              onLoad={(e) => {
-                const { width: iw, height: ih } = e.nativeEvent.source;
-                if (ih >= iw) {
-                  // Portrait photo — display at natural full height
-                  setImageHeight(Math.round((W / iw) * ih));
-                } else {
-                  // Landscape photo — force into portrait crop (4:3)
-                  setImageHeight(Math.round(W * 1.33));
-                }
-              }}
+              style={styles.image}
+              resizeMode={isLandscape ? "contain" : "cover"}
+              onLoad={handleImageLoad}
               onError={() => setImageError(true)}
             />
           )}
 
-          {/* Dark gradient — height driven by actual title bar height */}
+          {/* Gradient — height measured from bottom block so it aligns exactly
+              with the top of the date badge */}
+          <View style={[styles.photoGradient, { height: bottomBlockHeight }]} />
+
+          {/* Bottom block: date badge + headline + hint */}
           <View
-            style={[styles.imageGradient, { height: titleBarHeight + 48 }]}
-          />
-
-          {/* ── Title bar — overlaid on image bottom ── */}
-          <Animated.View
-            style={[
-              styles.titleBar,
-              { transform: [{ translateY: titleBarY }] },
-            ]}
-            onLayout={(e) => setTitleBarHeight(e.nativeEvent.layout.height)}
+            style={styles.photoBottom}
+            onLayout={handleBottomBlockLayout}
           >
-            {/* Issue number / entry tag */}
-            <View style={styles.issueBadge}>
-              <Text style={styles.issueDot}>◈</Text>
-              <Text style={styles.issueText}>{formattedDate.short}</Text>
-            </View>
-            <Text style={styles.locationHeadline}>
-              {entry.address || "Unknown location"}
-            </Text>
-          </Animated.View>
-        </View>
-
-        {/* ── Content below image ── */}
-        <View style={[styles.content, { backgroundColor: theme.background }]}>
-          {/* Thin rule */}
-          <View style={[styles.rule, { backgroundColor: theme.border }]} />
-
-          {/* Date + time row */}
-          <View style={styles.metaRow}>
-            <View style={styles.metaItem}>
-              <Text style={[styles.metaLabel, { color: theme.textMuted }]}>
-                DATE
-              </Text>
-              <Text style={[styles.metaValue, { color: theme.textPrimary }]}>
-                {formattedDate.full}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.metaVertDivider,
-                { backgroundColor: theme.border },
-              ]}
-            />
-            <View style={styles.metaItem}>
-              <Text style={[styles.metaLabel, { color: theme.textMuted }]}>
-                TIME
-              </Text>
-              <Text style={[styles.metaValue, { color: theme.textPrimary }]}>
-                {formattedDate.time || "—"}
-              </Text>
-            </View>
-          </View>
-
-          <View style={[styles.rule, { backgroundColor: theme.border }]} />
-
-          {/* Full address block */}
-          <View style={styles.addressBlock}>
-            <Text style={[styles.blockLabel, { color: theme.textMuted }]}>
-              LOCATION
-            </Text>
-            <View style={styles.addressRow}>
-              <Text style={[styles.addressDot, { color: theme.textSecondary }]}>
-                ◎
-              </Text>
-              <Text style={[styles.addressFull, { color: theme.textPrimary }]}>
+            <View style={styles.photoTitle}>
+              <View style={styles.issueBadge}>
+                <Text style={styles.issueDot}>◈</Text>
+                <Text style={styles.issueText}>{formattedDate.short}</Text>
+              </View>
+              <Text style={styles.locationHeadline} numberOfLines={2}>
                 {entry.address || "Unknown location"}
               </Text>
             </View>
+
+            <Animated.View style={[styles.swipeHint, { opacity: hintOpacity }]}>
+              <Text style={styles.swipeArrow}>↑</Text>
+              <Text style={styles.swipeText}>Swipe up for details</Text>
+            </Animated.View>
+          </View>
+        </View>
+
+        {/* ── Details panel ──
+            No minHeight: H — panel is only as tall as its actual content.
+            ScrollView total height = H (photo) + panelContentHeight.
+            Max scroll offset = panelContentHeight - insets.bottom - margin,
+            which lands exactly at the bottom of REF. ── */}
+        <View
+          style={[styles.detailsPanel, { backgroundColor: theme.background }]}
+          onLayout={handlePanelLayout}
+        >
+          <View style={styles.handleWrap}>
+            <View style={[styles.handle, { backgroundColor: theme.border }]} />
           </View>
 
-          <View style={[styles.rule, { backgroundColor: theme.border }]} />
+          {/* Captured */}
+          <View style={[styles.detailsSection, { borderBottomColor: theme.border }]}>
+            <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>CAPTURED</Text>
+            <DetailRow
+              label={formattedDate.full}
+              value={formattedDate.time || "—"}
+              theme={theme}
+              icon="◷"
+            />
+          </View>
 
-          {/* Note — only shown if description exists */}
+          {/* Location */}
+          <View style={[styles.detailsSection, { borderBottomColor: theme.border }]}>
+            <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>LOCATION</Text>
+            <DetailRow
+              label="Address"
+              value={entry.address || "Unknown location"}
+              theme={theme}
+              icon="◎"
+            />
+            {entry.latitude != null && entry.longitude != null && (
+              <DetailRow
+                label="Coordinates"
+                value={`${entry.latitude.toFixed(5)}, ${entry.longitude.toFixed(5)}`}
+                theme={theme}
+                icon="⊕"
+              />
+            )}
+          </View>
+
+          {/* Note */}
           {entry.description ? (
-            <>
-              <View style={styles.descriptionBlock}>
-                <Text style={[styles.blockLabel, { color: theme.textMuted }]}>
-                  NOTE
-                </Text>
-                <Text
-                  style={[styles.descriptionText, { color: theme.textPrimary }]}
-                >
+            <View style={[styles.detailsSection, { borderBottomColor: theme.border }]}>
+              <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>NOTE</Text>
+              <View style={[styles.noteBox, {
+                backgroundColor: theme.surfaceSecondary,
+                borderColor: theme.border,
+              }]}>
+                <Text style={[styles.noteText, { color: theme.textPrimary }]}>
                   {entry.description}
                 </Text>
               </View>
-              <View style={[styles.rule, { backgroundColor: theme.border }]} />
-            </>
+            </View>
           ) : null}
 
-          {/* REF */}
-          <View style={[styles.idBlock, { paddingBottom: insets.bottom + 40 }]}>
-            <Text style={[styles.blockLabel, { color: theme.textMuted }]}>
-              REF
-            </Text>
-            <Text
-              style={[styles.idText, { color: theme.textMuted }]}
-              numberOfLines={1}
-            >
+          {/* Photo */}
+          <View style={[styles.detailsSection, { borderBottomColor: theme.border }]}>
+            <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>PHOTO</Text>
+            <DetailRow
+              label="Orientation"
+              value={isLandscape ? "Landscape" : "Portrait"}
+              theme={theme}
+              icon={isLandscape ? "⬛" : "▬"}
+            />
+          </View>
+
+          {/* REF — bottom padding = safe area + 40px margin so scroll stops here */}
+          <View style={[styles.detailsSection, {
+            borderBottomColor: "transparent",
+            paddingBottom: insets.bottom + 40,
+          }]}>
+            <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>REF</Text>
+            <Text style={[styles.refText, { color: theme.textMuted }]} numberOfLines={1}>
               {entry.id}
             </Text>
           </View>
         </View>
       </Animated.ScrollView>
 
-      {/* ── Back button — sticky top left ── */}
+      {/* ── Back button ── */}
       <Animated.View style={[styles.backBtnWrap, { top: insets.top + 12 }]}>
-        <Animated.View style={[styles.backBtn, { backgroundColor: btnBg }]}>
+        <Animated.View style={[styles.floatBtn, {
+          backgroundColor: btnBg,
+          borderColor: btnBorderColor,
+          borderWidth: 1,
+        }]}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            style={styles.backBtnInner}
+            style={styles.floatBtnInner}
             activeOpacity={0.8}
             accessibilityLabel="Go back"
           >
-            <Animated.Text
-              style={[styles.backBtnText, { color: btnTextColor }]}
-            >
+            <Animated.Text style={[styles.floatBtnText, { color: btnContentColor }]}>
               ←
             </Animated.Text>
           </TouchableOpacity>
         </Animated.View>
       </Animated.View>
 
-      {/* ── Delete button — sticky top right ── */}
-      <View style={[styles.deleteBtnWrap, { top: insets.top + 12 }]}>
-        <TouchableOpacity
-          style={styles.deleteBtn}
-          onPress={handleDelete}
-          activeOpacity={0.8}
-          accessibilityLabel="Delete entry"
-        >
-          <TrashIcon color="#FF4444" />
-        </TouchableOpacity>
-      </View>
+      {/* ── Delete button ── */}
+      <Animated.View style={[styles.deleteBtnWrap, { top: insets.top + 12 }]}>
+        <Animated.View style={[styles.floatBtn, {
+          backgroundColor: btnBg,
+          borderColor: btnBorderColor,
+          borderWidth: 1,
+        }]}>
+          <TouchableOpacity
+            onPress={handleDelete}
+            style={styles.floatBtnInner}
+            activeOpacity={0.8}
+            accessibilityLabel="Delete entry"
+          >
+            <TrashIcon color="#FF4444" />
+          </TouchableOpacity>
+        </Animated.View>
+      </Animated.View>
     </View>
   );
 };
@@ -347,45 +349,46 @@ export const EntryDetailsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
-  // Image
-  imageContainer: {
+  photoSection: {
     width: W,
-    overflow: "hidden",
+    height: H,
+    backgroundColor: "#000",
   },
   image: {
+    ...StyleSheet.absoluteFillObject,
     width: W,
+    height: H,
   },
   imageFallback: {
-    width: "100%",
-    height: IMAGE_HEIGHT,
+    ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
   },
-  fallbackSymbol: { fontSize: 32 },
-  fallbackText: { fontSize: 13 },
-  imageGradient: {
+  fallbackSymbol: { fontSize: 36, color: "#555" },
+  fallbackText: { fontSize: 13, color: "#555" },
+
+  // Height is set dynamically via bottomBlockHeight — starts exactly at the date
+  photoGradient: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: "rgba(0,0,0,0.72)",
   },
 
-  // Title bar on image
-  titleBar: {
+  photoBottom: {
     position: "absolute",
-    bottom: 24,
-    left: 20,
-    right: 20,
-    gap: 8,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingBottom: 36,
+    gap: 20,
   },
-  locationHeadline: {
-    color: "#FFFFFF",
-    fontSize: 22,
-    fontWeight: "800",
-    letterSpacing: -0.3,
-    lineHeight: 28,
+
+  photoTitle: {
+    gap: 8,
   },
   issueBadge: {
     flexDirection: "row",
@@ -393,124 +396,135 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   issueDot: {
-    color: "rgba(255,255,255,0.7)",
+    color: "rgba(255,255,255,0.6)",
     fontSize: 11,
   },
   issueText: {
-    color: "rgba(255,255,255,0.7)",
+    color: "rgba(255,255,255,0.6)",
     fontSize: 11,
     fontWeight: "600",
     letterSpacing: 1.2,
     textTransform: "uppercase",
   },
+  locationHeadline: {
+    color: "#FFFFFF",
+    fontSize: 24,
+    fontWeight: "800",
+    letterSpacing: -0.4,
+    lineHeight: 30,
+  },
 
-  // Content
-  content: {
+  swipeHint: {
+    alignItems: "center",
+    gap: 4,
+  },
+  swipeArrow: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 16,
+  },
+  swipeText: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 11,
+    fontWeight: "500",
+    letterSpacing: 0.3,
+  },
+
+  detailsPanel: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 12,
+    // No minHeight — panel is exactly as tall as its content
+  },
+
+  handleWrap: {
+    alignItems: "center",
+    paddingBottom: 20,
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+  },
+
+  detailsSection: {
     paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 14,
   },
-
-  rule: {
-    height: StyleSheet.hairlineWidth,
-  },
-
-  // Meta row
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    paddingVertical: 20,
-    gap: 16,
-  },
-  metaItem: {
-    flex: 1,
-    gap: 5,
-  },
-  metaLabel: {
-    fontSize: 9,
+  sectionTitle: {
+    fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1.4,
   },
-  metaValue: {
-    fontSize: 13,
-    fontWeight: "500",
-    lineHeight: 19,
+
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
   },
-  metaVertDivider: {
-    width: StyleSheet.hairlineWidth,
+  detailIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  detailIcon: { fontSize: 18 },
+  detailText: {
+    flex: 1,
+    gap: 2,
+  },
+  detailLabel: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  detailValue: {
+    fontSize: 14,
+    fontWeight: "500",
+    lineHeight: 20,
   },
 
-  // Description block
-  descriptionBlock: {
-    paddingVertical: 20,
-    gap: 8,
+  noteBox: {
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 14,
   },
-  descriptionText: {
+  noteText: {
     fontSize: 14,
     lineHeight: 22,
     fontStyle: "italic",
   },
 
-  // Address block
-  addressBlock: {
-    paddingVertical: 20,
-    gap: 8,
-  },
-  blockLabel: {
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 1.4,
-  },
-  addressRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-  },
-  addressDot: { fontSize: 15, marginTop: 1 },
-  addressFull: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: "500",
-    lineHeight: 22,
+  refText: {
+    fontSize: 11,
+    letterSpacing: 0.3,
   },
 
-  idBlock: {
-    paddingTop: 0,
-  },
-
-  // Back button
   backBtnWrap: {
     position: "absolute",
     left: 16,
   },
-  backBtn: {
+  deleteBtnWrap: {
+    position: "absolute",
+    right: 16,
+  },
+  floatBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
     overflow: "hidden",
   },
-  backBtnInner: {
+  floatBtnInner: {
     width: "100%",
     height: "100%",
     alignItems: "center",
     justifyContent: "center",
   },
-  backBtnText: {
+  floatBtnText: {
     fontSize: 18,
     fontWeight: "400",
-  },
-
-  // Delete button
-  deleteBtnWrap: {
-    position: "absolute",
-    right: 16,
-  },
-  deleteBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(0,0,0,0.38)",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,255,255,0.2)",
   },
 });

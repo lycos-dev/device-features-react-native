@@ -17,12 +17,11 @@ import { RootStackNavigationProp } from '../../navigation';
 import { deleteEntry, getEntries } from '../../services';
 import { TravelEntry } from '../../types';
 
-// ─── Stats Bar ────────────────────────────────────────────────────────────────
-const StatsBar: React.FC<{
+// ─── Section Header (with stats inline) ──────────────────────────────────────
+const SectionHeader: React.FC<{
   entries: TravelEntry[];
   theme: ReturnType<typeof useTheme>['theme'];
 }> = ({ entries, theme }) => {
-  const total = entries.length;
   const lastEntry = entries[0];
   const lastDate = lastEntry
     ? new Date(lastEntry.createdAt).toLocaleDateString(undefined, {
@@ -32,32 +31,24 @@ const StatsBar: React.FC<{
     : '—';
 
   return (
-    <View style={[styles.statsBar, { borderBottomColor: theme.border }]}>
-      <View style={styles.statItem}>
-        <Text style={[styles.statNumber, { color: theme.textPrimary }]}>{total}</Text>
-        <Text style={[styles.statLabel, { color: theme.textMuted }]}>Entries</Text>
+    <View style={styles.sectionHeader}>
+      {/* Left: Recent label + count badge */}
+      <View style={styles.sectionLeft}>
+        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Entries</Text>
+        <View style={[styles.sectionBadge, { backgroundColor: theme.surfaceSecondary }]}>
+          <Text style={[styles.sectionBadgeText, { color: theme.textSecondary }]}>
+            {entries.length}
+          </Text>
+        </View>
       </View>
-      <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
-      <View style={styles.statItem}>
-        <Text style={[styles.statNumber, { color: theme.textPrimary }]}>{lastDate}</Text>
-        <Text style={[styles.statLabel, { color: theme.textMuted }]}>Last entry</Text>
-      </View>
+
+      {/* Right: last entry date */}
+      <Text style={[styles.sectionMeta, { color: theme.textMuted }]}>
+        Last Entry: {lastDate}
+      </Text>
     </View>
   );
 };
-
-// ─── Section Header ───────────────────────────────────────────────────────────
-const SectionHeader: React.FC<{
-  count: number;
-  theme: ReturnType<typeof useTheme>['theme'];
-}> = ({ count, theme }) => (
-  <View style={styles.sectionHeader}>
-    <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Recent</Text>
-    <View style={[styles.sectionBadge, { backgroundColor: theme.surfaceSecondary }]}>
-      <Text style={[styles.sectionBadgeText, { color: theme.textSecondary }]}>{count}</Text>
-    </View>
-  </View>
-);
 
 // ─── HomeScreen ───────────────────────────────────────────────────────────────
 export const HomeScreen: React.FC = () => {
@@ -115,10 +106,11 @@ export const HomeScreen: React.FC = () => {
     />
   );
 
-  const renderHeader = () => (
+  const renderListHeader = () => (
     <>
-      {entries.length > 0 && <StatsBar entries={entries} theme={theme} />}
-      {entries.length > 0 && <SectionHeader count={entries.length} theme={theme} />}
+      {entries.length > 0 && (
+        <SectionHeader entries={entries} theme={theme} />
+      )}
     </>
   );
 
@@ -163,7 +155,7 @@ export const HomeScreen: React.FC = () => {
           data={entries}
           keyExtractor={item => item.id}
           renderItem={renderEntry}
-          ListHeaderComponent={renderHeader}
+          ListHeaderComponent={renderListHeader}
           ListEmptyComponent={<EmptyState />}
           contentContainerStyle={
             entries.length === 0 ? styles.emptyContainer : styles.listContent
@@ -196,41 +188,18 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
 
-  statsBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 3,
-  },
-  statNumber: {
-    fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-  },
-  statLabel: {
-    fontSize: 10,
-    fontWeight: '500',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  statDivider: {
-    width: StyleSheet.hairlineWidth,
-    height: 28,
-  },
-
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingTop: 20,
     paddingBottom: 8,
+  },
+  sectionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   sectionTitle: {
     fontSize: 13,
@@ -245,6 +214,10 @@ const styles = StyleSheet.create({
   sectionBadgeText: {
     fontSize: 11,
     fontWeight: '600',
+  },
+  sectionMeta: {
+    fontSize: 11,
+    fontWeight: '500',
   },
 
   listContent: { paddingTop: 8, paddingBottom: 120 },
