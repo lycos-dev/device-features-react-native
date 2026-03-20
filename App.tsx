@@ -7,21 +7,15 @@ import { ThemeProvider, useTheme } from './src/context';
 import { useAppInit } from './src/hooks';
 import { RootNavigator } from './src/navigation';
 
-// ─── App shell (needs ThemeProvider above it) ─────────────────────────────────
 const AppContent: React.FC = () => {
   const { isDark, theme } = useTheme();
   const { isReady, initError } = useAppInit();
 
-  // Show loading splash until permissions + listeners are ready
   if (!isReady) {
     return (
       <View style={[styles.splash, { backgroundColor: theme.background }]}>
         <Text style={styles.splashEmoji}>🗺️</Text>
-        <ActivityIndicator
-          size="large"
-          color={theme.primary}
-          style={styles.splashSpinner}
-        />
+        <ActivityIndicator size="large" color={theme.primary} style={styles.splashSpinner} />
         <Text style={[styles.splashText, { color: theme.textMuted }]}>
           Setting up Travel Diary...
         </Text>
@@ -29,7 +23,6 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // Show non-blocking warning if init had an error but still allow usage
   if (initError) {
     console.warn('[App] Init error (non-fatal):', initError);
   }
@@ -42,7 +35,6 @@ const AppContent: React.FC = () => {
   );
 };
 
-// ─── Root — ThemeProvider must wrap everything ────────────────────────────────
 export default function App() {
   return (
     <ThemeProvider>
@@ -58,14 +50,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 16,
   },
-  splashEmoji: {
-    fontSize: 72,
-  },
-  splashSpinner: {
-    marginTop: 8,
-  },
-  splashText: {
-    fontSize: 15,
-    marginTop: 4,
-  },
+  splashEmoji: { fontSize: 72 },
+  splashSpinner: { marginTop: 8 },
+  splashText: { fontSize: 15, marginTop: 4 },
 });

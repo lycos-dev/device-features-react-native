@@ -1,4 +1,4 @@
-export { openCamera } from './cameraService';
+export { ensureCameraPermission, openCamera } from './cameraService';
 export type { CameraResult } from './cameraService';
 export { CameraPermissionDeniedError, CameraCancelledError } from './cameraService';
 

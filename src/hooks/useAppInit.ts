@@ -3,19 +3,15 @@ import { useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus, Platform } from 'react-native';
 
 import { requestPermission } from '../services/notificationService';
-import { usePermissions } from './usePermissions';
 
 export interface AppInitState {
   isReady: boolean;
-  permissionsGranted: boolean;
   initError: string | null;
 }
 
 export const useAppInit = (): AppInitState => {
-  const { requestAllPermissions } = usePermissions();
   const [state, setState] = useState<AppInitState>({
     isReady: false,
-    permissionsGranted: false,
     initError: null,
   });
 
@@ -28,10 +24,12 @@ export const useAppInit = (): AppInitState => {
 
     const init = async () => {
       try {
-        // 1. Request all permissions on startup
-        const granted = await requestAllPermissions();
+        // Only request notification permission on startup.
+        // Camera and location are requested contextually when the user
+        // actually taps the camera button — not here.
+        await requestPermission();
 
-        // 2. Set up notification channel for Android
+        // Set up Android notification channel
         if (Platform.OS === 'android') {
           await Notifications.setNotificationChannelAsync('travel-diary', {
             name: 'Travel Diary',
@@ -40,28 +38,25 @@ export const useAppInit = (): AppInitState => {
           });
         }
 
-        // 3. Set up notification listeners
+        // Notification listeners
         notificationListener.current =
           Notifications.addNotificationReceivedListener(notification => {
-            // Notification received while app is foregrounded
             console.log('[AppInit] Notification received:', notification.request.identifier);
           });
 
         responseListener.current =
           Notifications.addNotificationResponseReceivedListener(response => {
-            // User tapped on a notification
             console.log('[AppInit] Notification tapped:', response.notification.request.identifier);
           });
 
         if (mounted) {
-          setState({ isReady: true, permissionsGranted: granted, initError: null });
+          setState({ isReady: true, initError: null });
         }
       } catch (error) {
         console.error('[AppInit] Initialization error:', error);
         if (mounted) {
           setState({
-            isReady: true, // Still mark ready so app doesn't hang
-            permissionsGranted: false,
+            isReady: true,
             initError: error instanceof Error ? error.message : 'Initialization failed.',
           });
         }
@@ -70,13 +65,9 @@ export const useAppInit = (): AppInitState => {
 
     init();
 
-    // Re-request notification permission when app comes back to foreground
-    // (user may have granted it in Settings while app was backgrounded)
+    // Re-check notification permission when app returns to foreground
     const handleAppStateChange = async (nextState: AppStateStatus) => {
-      if (
-        appStateRef.current.match(/inactive|background/) &&
-        nextState === 'active'
-      ) {
+      if (appStateRef.current.match(/inactive|background/) && nextState === 'active') {
         await requestPermission();
       }
       appStateRef.current = nextState;

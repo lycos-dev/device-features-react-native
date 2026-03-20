@@ -1,5 +1,4 @@
 import { useNavigation } from '@react-navigation/native';
-import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import React, { useCallback, useState } from 'react';
 import {
@@ -21,6 +20,7 @@ import { useTheme } from '../../context';
 import { RootStackNavigationProp } from '../../navigation';
 import {
   CameraCancelledError,
+  ensureCameraPermission,
   getAddressFromCoords,
   openCamera,
   saveEntry,
@@ -70,11 +70,6 @@ const CameraIcon: React.FC<{ color: string }> = ({ color }) => (
 );
 
 // ─── Permission helpers ───────────────────────────────────────────────────────
-const requestCameraPermission = async (): Promise<boolean> => {
-  const { status } = await ImagePicker.requestCameraPermissionsAsync();
-  return status === 'granted';
-};
-
 const requestLocationPermission = async (): Promise<boolean> => {
   const { status } = await Location.requestForegroundPermissionsAsync();
   return status === 'granted';
@@ -98,21 +93,18 @@ export const AddEntryScreen: React.FC = () => {
     try {
       setStatus('requesting');
 
-      const cameraGranted = await requestCameraPermission();
-      if (!cameraGranted) {
-        Alert.alert(
-          'Camera Access Required',
-          'Please allow camera access to take photos for your travel entries.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
+      // ensureCameraPermission handles:
+      // - already granted → proceeds silently
+      // - not yet asked  → shows system prompt
+      // - permanently denied → shows Settings alert
+      const cameraGranted = await ensureCameraPermission();
+      if (!cameraGranted) return;
 
       setStatus('capturing');
       const { uri } = await openCamera();
       setImageUri(uri);
 
-      // Ask user whether to tag location — after photo is taken
+      // Ask user whether to tag location after photo is taken
       Alert.alert(
         'Tag Location?',
         'Would you like to tag the location for this photo?',
@@ -138,9 +130,10 @@ export const AddEntryScreen: React.FC = () => {
       } else {
         Alert.alert('Error', err instanceof Error ? err.message : 'Could not open camera.');
       }
+    } finally {
       setStatus('idle');
     }
-  }, [isLoading]);
+  }, [isLoading, fetchLocation]);
 
   // ─── Fetch location ──────────────────────────────────────────────────────────
   const fetchLocation = useCallback(async () => {
