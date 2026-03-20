@@ -1,5 +1,4 @@
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
-import * as Location from "expo-location";
 import React, { useRef, useState } from "react";
 import {
   Alert,
@@ -7,19 +6,16 @@ import {
   Dimensions,
   Image,
   LayoutChangeEvent,
-  Linking,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme } from "../../context";
 import { RootStackParamList, RootStackNavigationProp } from "../../navigation";
-import { deleteEntry, updateEntry, getAddressFromCoords } from "../../services";
-import { TravelEntry } from "../../types";
+import { deleteEntry } from "../../services";
 
 type EntryDetailsRouteProp = RouteProp<RootStackParamList, "EntryDetails">;
 
@@ -68,9 +64,7 @@ export const EntryDetailsScreen: React.FC = () => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const { entry: initialEntry } = route.params;
-  const [entry, setEntry] = useState<TravelEntry>(initialEntry);
-  const [addingLocation, setAddingLocation] = useState(false);
+  const { entry } = route.params;
 
   const [imageError, setImageError] = useState(false);
   const [isLandscape, setIsLandscape] = useState(false);
@@ -119,56 +113,6 @@ export const EntryDetailsScreen: React.FC = () => {
     }
   })();
 
-  // ─── Add location ─────────────────────────────────────────────────────────
-  const handleAddLocation = async () => {
-    const { status, canAskAgain } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      if (!canAskAgain) {
-        // Permanently denied — offer to open Settings
-        Alert.alert(
-          "Location Access Required",
-          "Location access is blocked. Please enable it in your device Settings.",
-          [
-            { text: "Cancel", style: "cancel" },
-            { text: "Open Settings", onPress: () => Linking.openSettings() },
-          ],
-        );
-      } else {
-        Alert.alert(
-          "Location Access Required",
-          "Please allow location access to add a location to this entry.",
-          [{ text: "OK" }],
-        );
-      }
-      return;
-    }
-
-    try {
-      setAddingLocation(true);
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      const address = await getAddressFromCoords({
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-      });
-
-      const updated: TravelEntry = {
-        ...entry,
-        address,
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-      };
-
-      await updateEntry(updated);
-      setEntry(updated);
-    } catch {
-      Alert.alert("Error", "Could not fetch location. Please try again.");
-    } finally {
-      setAddingLocation(false);
-    }
-  };
-
   // ─── Delete ───────────────────────────────────────────────────────────────
   const handleDelete = () => {
     Alert.alert("Delete Entry", "This entry will be permanently removed.", [
@@ -200,8 +144,6 @@ export const EntryDetailsScreen: React.FC = () => {
   const handlePanelLayout = (e: LayoutChangeEvent) => {
     setPanelContentHeight(e.nativeEvent.layout.height);
   };
-
-  const noLocation = entry.address === "No location";
 
   return (
     <View style={[styles.container, { backgroundColor: "#000" }]}>
@@ -275,25 +217,7 @@ export const EntryDetailsScreen: React.FC = () => {
 
           {/* Location */}
           <View style={[styles.detailsSection, { borderBottomColor: theme.border }]}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>LOCATION</Text>
-              {noLocation && (
-                <TouchableOpacity
-                  onPress={handleAddLocation}
-                  disabled={addingLocation}
-                  activeOpacity={0.7}
-                  style={[styles.addLocationBtn, { backgroundColor: theme.primaryLight, borderColor: theme.border }]}
-                >
-                  {addingLocation ? (
-                    <ActivityIndicator size="small" color={theme.primary} />
-                  ) : (
-                    <Text style={[styles.addLocationText, { color: theme.primary }]}>
-                      ◎  Add Location
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              )}
-            </View>
+            <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>LOCATION</Text>
             <DetailRow
               label="Address"
               value={entry.address || "Unknown location"}
@@ -436,18 +360,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20,
     borderBottomWidth: StyleSheet.hairlineWidth, gap: 14,
   },
-  sectionHeader: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-  },
   sectionTitle: { fontSize: 10, fontWeight: "700", letterSpacing: 1.4 },
-
-  addLocationBtn: {
-    flexDirection: "row", alignItems: "center",
-    paddingHorizontal: 10, paddingVertical: 5,
-    borderRadius: 20, borderWidth: StyleSheet.hairlineWidth,
-    minWidth: 44, minHeight: 28, justifyContent: "center",
-  },
-  addLocationText: { fontSize: 12, fontWeight: "600" },
 
   detailRow: { flexDirection: "row", alignItems: "center", gap: 14 },
   detailIconWrap: {
