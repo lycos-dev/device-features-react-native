@@ -1,5 +1,5 @@
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import React, { useRef, useState } from 'react';
+import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
+import React, { useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -11,32 +11,71 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useTheme } from '../../context';
-import { RootStackParamList, RootStackNavigationProp } from '../../navigation';
-import { deleteEntry } from '../../services';
+import { useTheme } from "../../context";
+import { RootStackParamList, RootStackNavigationProp } from "../../navigation";
+import { deleteEntry } from "../../services";
 
-type EntryDetailsRouteProp = RouteProp<RootStackParamList, 'EntryDetails'>;
+type EntryDetailsRouteProp = RouteProp<RootStackParamList, "EntryDetails">;
 
-const { width: W, height: H } = Dimensions.get('window');
+const { width: W, height: H } = Dimensions.get("window");
 const IMAGE_HEIGHT = H * 0.52; // fallback, overridden by actual ratio
 
 // ─── Trash icon ───────────────────────────────────────────────────────────────
 const TrashIcon: React.FC<{ color: string }> = ({ color }) => (
-  <View style={{ alignItems: 'center', gap: 1 }}>
-    <View style={{ width: 14, height: 1.5, backgroundColor: color, borderRadius: 1 }} />
-    <View style={{ width: 6, height: 1.5, backgroundColor: color, borderRadius: 1, marginTop: -3, marginBottom: 1 }} />
-    <View style={{
-      width: 12, height: 13,
-      borderLeftWidth: 1.5, borderRightWidth: 1.5, borderBottomWidth: 1.5,
-      borderColor: color, borderBottomLeftRadius: 2, borderBottomRightRadius: 2,
-      flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center',
-      paddingHorizontal: 2,
-    }}>
-      <View style={{ width: 1.5, height: 7, backgroundColor: color, borderRadius: 1 }} />
-      <View style={{ width: 1.5, height: 7, backgroundColor: color, borderRadius: 1 }} />
+  <View style={{ alignItems: "center", gap: 1 }}>
+    <View
+      style={{
+        width: 14,
+        height: 1.5,
+        backgroundColor: color,
+        borderRadius: 1,
+      }}
+    />
+    <View
+      style={{
+        width: 6,
+        height: 1.5,
+        backgroundColor: color,
+        borderRadius: 1,
+        marginTop: -3,
+        marginBottom: 1,
+      }}
+    />
+    <View
+      style={{
+        width: 12,
+        height: 13,
+        borderLeftWidth: 1.5,
+        borderRightWidth: 1.5,
+        borderBottomWidth: 1.5,
+        borderColor: color,
+        borderBottomLeftRadius: 2,
+        borderBottomRightRadius: 2,
+        flexDirection: "row",
+        justifyContent: "space-evenly",
+        alignItems: "center",
+        paddingHorizontal: 2,
+      }}
+    >
+      <View
+        style={{
+          width: 1.5,
+          height: 7,
+          backgroundColor: color,
+          borderRadius: 1,
+        }}
+      />
+      <View
+        style={{
+          width: 1.5,
+          height: 7,
+          backgroundColor: color,
+          borderRadius: 1,
+        }}
+      />
     </View>
   </View>
 );
@@ -50,25 +89,26 @@ export const EntryDetailsScreen: React.FC = () => {
   const { entry } = route.params;
   const [imageError, setImageError] = useState(false);
   const [imageHeight, setImageHeight] = useState(H * 0.52);
+  const [titleBarHeight, setTitleBarHeight] = useState(100);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   // Back button fades from white → themed as user scrolls past image
   const btnBg = scrollY.interpolate({
     inputRange: [0, IMAGE_HEIGHT * 0.5],
-    outputRange: ['rgba(0,0,0,0.38)', theme.surfaceSecondary],
-    extrapolate: 'clamp',
+    outputRange: ["rgba(0,0,0,0.38)", theme.surfaceSecondary],
+    extrapolate: "clamp",
   });
   const btnTextColor = scrollY.interpolate({
     inputRange: [0, IMAGE_HEIGHT * 0.5],
-    outputRange: ['#FFFFFF', theme.textPrimary],
-    extrapolate: 'clamp',
+    outputRange: ["#FFFFFF", theme.textPrimary],
+    extrapolate: "clamp",
   });
 
   // Title bar slides up from bottom of image on scroll
   const titleBarY = scrollY.interpolate({
-    inputRange: [0, IMAGE_HEIGHT * 0.3],
-    outputRange: [0, -IMAGE_HEIGHT * 0.1],
-    extrapolate: 'clamp',
+    inputRange: [0, IMAGE_HEIGHT],
+    outputRange: [0, -12],
+    extrapolate: "clamp",
   });
 
   const formattedDate = (() => {
@@ -76,46 +116,45 @@ export const EntryDetailsScreen: React.FC = () => {
       const d = new Date(entry.createdAt);
       return {
         full: d.toLocaleDateString(undefined, {
-          weekday: 'long',
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric',
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+          year: "numeric",
         }),
         time: d.toLocaleTimeString(undefined, {
-          hour: '2-digit',
-          minute: '2-digit',
+          hour: "2-digit",
+          minute: "2-digit",
         }),
         short: d.toLocaleDateString(undefined, {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
+          month: "short",
+          day: "numeric",
+          year: "numeric",
         }),
       };
     } catch {
-      return { full: entry.createdAt, time: '', short: entry.createdAt };
+      return { full: entry.createdAt, time: "", short: entry.createdAt };
     }
   })();
 
   const handleDelete = () => {
-    Alert.alert(
-      'Delete Entry',
-      'This entry will be permanently removed.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteEntry(entry.id);
-              navigation.goBack();
-            } catch (err) {
-              Alert.alert('Delete Failed', err instanceof Error ? err.message : 'Could not delete.');
-            }
-          },
+    Alert.alert("Delete Entry", "This entry will be permanently removed.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteEntry(entry.id);
+            navigation.goBack();
+          } catch (err) {
+            Alert.alert(
+              "Delete Failed",
+              err instanceof Error ? err.message : "Could not delete.",
+            );
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
@@ -125,7 +164,7 @@ export const EntryDetailsScreen: React.FC = () => {
       <Animated.ScrollView
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
+          { useNativeDriver: false },
         )}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
@@ -134,64 +173,89 @@ export const EntryDetailsScreen: React.FC = () => {
         {/* ── Hero image ── */}
         <View style={styles.imageContainer}>
           {imageError ? (
-            <View style={[styles.imageFallback, { backgroundColor: theme.surfaceSecondary }]}>
-              <Text style={[styles.fallbackSymbol, { color: theme.textMuted }]}>⊘</Text>
-              <Text style={[styles.fallbackText, { color: theme.textMuted }]}>Image unavailable</Text>
+            <View
+              style={[
+                styles.imageFallback,
+                { backgroundColor: theme.surfaceSecondary },
+              ]}
+            >
+              <Text style={[styles.fallbackSymbol, { color: theme.textMuted }]}>
+                ⊘
+              </Text>
+              <Text style={[styles.fallbackText, { color: theme.textMuted }]}>
+                Image unavailable
+              </Text>
             </View>
           ) : (
             <Image
               source={{ uri: entry.imageUri }}
               style={[styles.image, { height: imageHeight }]}
               resizeMode="cover"
-              onLoad={e => {
+              onLoad={(e) => {
                 const { width: iw, height: ih } = e.nativeEvent.source;
-                setImageHeight(Math.round((W / iw) * ih));
+                if (ih >= iw) {
+                  // Portrait photo — display at natural full height
+                  setImageHeight(Math.round((W / iw) * ih));
+                } else {
+                  // Landscape photo — force into portrait crop (4:3)
+                  setImageHeight(Math.round(W * 1.33));
+                }
               }}
               onError={() => setImageError(true)}
             />
           )}
 
-          {/* Dark gradient at bottom of image */}
-          <View style={styles.imageGradient} />
+          {/* Dark gradient — height driven by actual title bar height */}
+          <View
+            style={[styles.imageGradient, { height: titleBarHeight + 48 }]}
+          />
 
           {/* ── Title bar — overlaid on image bottom ── */}
           <Animated.View
-            style={[styles.titleBar, { transform: [{ translateY: titleBarY }] }]}
+            style={[
+              styles.titleBar,
+              { transform: [{ translateY: titleBarY }] },
+            ]}
+            onLayout={(e) => setTitleBarHeight(e.nativeEvent.layout.height)}
           >
             {/* Issue number / entry tag */}
             <View style={styles.issueBadge}>
               <Text style={styles.issueDot}>◈</Text>
-              <Text style={styles.issueText}>
-                {formattedDate.short}
-              </Text>
+              <Text style={styles.issueText}>{formattedDate.short}</Text>
             </View>
-
-            {/* Location headline */}
-            <Text style={styles.locationHeadline} numberOfLines={2}>
-              {entry.address || 'Unknown location'}
+            <Text style={styles.locationHeadline}>
+              {entry.address || "Unknown location"}
             </Text>
           </Animated.View>
         </View>
 
         {/* ── Content below image ── */}
         <View style={[styles.content, { backgroundColor: theme.background }]}>
-
           {/* Thin rule */}
           <View style={[styles.rule, { backgroundColor: theme.border }]} />
 
           {/* Date + time row */}
           <View style={styles.metaRow}>
             <View style={styles.metaItem}>
-              <Text style={[styles.metaLabel, { color: theme.textMuted }]}>DATE</Text>
+              <Text style={[styles.metaLabel, { color: theme.textMuted }]}>
+                DATE
+              </Text>
               <Text style={[styles.metaValue, { color: theme.textPrimary }]}>
                 {formattedDate.full}
               </Text>
             </View>
-            <View style={[styles.metaVertDivider, { backgroundColor: theme.border }]} />
+            <View
+              style={[
+                styles.metaVertDivider,
+                { backgroundColor: theme.border },
+              ]}
+            />
             <View style={styles.metaItem}>
-              <Text style={[styles.metaLabel, { color: theme.textMuted }]}>TIME</Text>
+              <Text style={[styles.metaLabel, { color: theme.textMuted }]}>
+                TIME
+              </Text>
               <Text style={[styles.metaValue, { color: theme.textPrimary }]}>
-                {formattedDate.time || '—'}
+                {formattedDate.time || "—"}
               </Text>
             </View>
           </View>
@@ -200,35 +264,55 @@ export const EntryDetailsScreen: React.FC = () => {
 
           {/* Full address block */}
           <View style={styles.addressBlock}>
-            <Text style={[styles.blockLabel, { color: theme.textMuted }]}>LOCATION</Text>
+            <Text style={[styles.blockLabel, { color: theme.textMuted }]}>
+              LOCATION
+            </Text>
             <View style={styles.addressRow}>
-              <Text style={[styles.addressDot, { color: theme.textSecondary }]}>◎</Text>
+              <Text style={[styles.addressDot, { color: theme.textSecondary }]}>
+                ◎
+              </Text>
               <Text style={[styles.addressFull, { color: theme.textPrimary }]}>
-                {entry.address || 'Unknown location'}
+                {entry.address || "Unknown location"}
               </Text>
             </View>
           </View>
 
           <View style={[styles.rule, { backgroundColor: theme.border }]} />
 
-          {/* Entry ID */}
+          {/* Note — only shown if description exists */}
+          {entry.description ? (
+            <>
+              <View style={styles.descriptionBlock}>
+                <Text style={[styles.blockLabel, { color: theme.textMuted }]}>
+                  NOTE
+                </Text>
+                <Text
+                  style={[styles.descriptionText, { color: theme.textPrimary }]}
+                >
+                  {entry.description}
+                </Text>
+              </View>
+              <View style={[styles.rule, { backgroundColor: theme.border }]} />
+            </>
+          ) : null}
+
+          {/* REF */}
           <View style={[styles.idBlock, { paddingBottom: insets.bottom + 40 }]}>
-            <Text style={[styles.blockLabel, { color: theme.textMuted }]}>REF</Text>
-            <Text style={[styles.idText, { color: theme.textMuted }]} numberOfLines={1}>
+            <Text style={[styles.blockLabel, { color: theme.textMuted }]}>
+              REF
+            </Text>
+            <Text
+              style={[styles.idText, { color: theme.textMuted }]}
+              numberOfLines={1}
+            >
               {entry.id}
             </Text>
           </View>
-
         </View>
       </Animated.ScrollView>
 
       {/* ── Back button — sticky top left ── */}
-      <Animated.View
-        style={[
-          styles.backBtnWrap,
-          { top: insets.top + 12 },
-        ]}
-      >
+      <Animated.View style={[styles.backBtnWrap, { top: insets.top + 12 }]}>
         <Animated.View style={[styles.backBtn, { backgroundColor: btnBg }]}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
@@ -236,7 +320,9 @@ export const EntryDetailsScreen: React.FC = () => {
             activeOpacity={0.8}
             accessibilityLabel="Go back"
           >
-            <Animated.Text style={[styles.backBtnText, { color: btnTextColor }]}>
+            <Animated.Text
+              style={[styles.backBtnText, { color: btnTextColor }]}
+            >
               ←
             </Animated.Text>
           </TouchableOpacity>
@@ -264,59 +350,58 @@ const styles = StyleSheet.create({
   // Image
   imageContainer: {
     width: W,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   image: {
     width: W,
   },
   imageFallback: {
-    width: '100%',
+    width: "100%",
     height: IMAGE_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
   fallbackSymbol: { fontSize: 32 },
   fallbackText: { fontSize: 13 },
   imageGradient: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    height: '25%',
-    backgroundColor: 'rgba(0,0,0,0.52)',
+    backgroundColor: "rgba(0,0,0,0.55)",
   },
 
   // Title bar on image
   titleBar: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 24,
     left: 20,
     right: 20,
     gap: 8,
   },
+  locationHeadline: {
+    color: "#FFFFFF",
+    fontSize: 22,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+    lineHeight: 28,
+  },
   issueBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   issueDot: {
-    color: 'rgba(255,255,255,0.7)',
+    color: "rgba(255,255,255,0.7)",
     fontSize: 11,
   },
   issueText: {
-    color: 'rgba(255,255,255,0.7)',
+    color: "rgba(255,255,255,0.7)",
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
     letterSpacing: 1.2,
-    textTransform: 'uppercase',
-  },
-  locationHeadline: {
-    color: '#FFFFFF',
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    lineHeight: 32,
+    textTransform: "uppercase",
   },
 
   // Content
@@ -330,8 +415,8 @@ const styles = StyleSheet.create({
 
   // Meta row
   metaRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
+    flexDirection: "row",
+    alignItems: "stretch",
     paddingVertical: 20,
     gap: 16,
   },
@@ -341,16 +426,27 @@ const styles = StyleSheet.create({
   },
   metaLabel: {
     fontSize: 9,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 1.4,
   },
   metaValue: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: "500",
     lineHeight: 19,
   },
   metaVertDivider: {
     width: StyleSheet.hairlineWidth,
+  },
+
+  // Description block
+  descriptionBlock: {
+    paddingVertical: 20,
+    gap: 8,
+  },
+  descriptionText: {
+    fontSize: 14,
+    lineHeight: 22,
+    fontStyle: "italic",
   },
 
   // Address block
@@ -360,67 +456,61 @@ const styles = StyleSheet.create({
   },
   blockLabel: {
     fontSize: 9,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 1.4,
   },
   addressRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 8,
   },
   addressDot: { fontSize: 15, marginTop: 1 },
   addressFull: {
     flex: 1,
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: "500",
     lineHeight: 22,
   },
 
-  // ID block
   idBlock: {
-    paddingTop: 20,
-    gap: 6,
-  },
-  idText: {
-    fontSize: 11,
-    fontFamily: 'monospace',
+    paddingTop: 0,
   },
 
   // Back button
   backBtnWrap: {
-    position: 'absolute',
+    position: "absolute",
     left: 16,
   },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   backBtnInner: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
   },
   backBtnText: {
     fontSize: 18,
-    fontWeight: '400',
+    fontWeight: "400",
   },
 
   // Delete button
   deleteBtnWrap: {
-    position: 'absolute',
+    position: "absolute",
     right: 16,
   },
   deleteBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.38)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(0,0,0,0.38)",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: "rgba(255,255,255,0.2)",
   },
 });

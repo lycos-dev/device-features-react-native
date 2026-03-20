@@ -1,6 +1,7 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import React from 'react';
+import * as ScreenOrientation from 'expo-screen-orientation';
+import React, { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { ThemeProvider, useTheme } from './src/context';
@@ -10,6 +11,10 @@ import { RootNavigator } from './src/navigation';
 const AppContent: React.FC = () => {
   const { isDark, theme } = useTheme();
   const { isReady, initError } = useAppInit();
+
+  useEffect(() => {
+    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+  }, []);
 
   if (!isReady) {
     return (

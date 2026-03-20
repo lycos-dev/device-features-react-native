@@ -3,4 +3,7 @@ export interface TravelEntry {
   imageUri: string;
   address: string;
   createdAt: string;
+  latitude?: number;
+  longitude?: number;
+  description?: string;
 }
