@@ -286,12 +286,13 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
       >
         <TouchableWithoutFeedback
           onPress={() => {
-            // Reset the stack to Tabs first, then push AddEntry once.
-            // This prevents multiple AddEntry screens stacking on repeated taps.
+            // Reset the stack preserving the current active tab so pressing
+            // back from AddEntry returns to whichever tab the user was on.
+            const activeTab = state.routes[state.index]?.name ?? 'Home';
             navigation.reset({
               index: 1,
               routes: [
-                { name: 'Tabs' as never },
+                { name: 'Tabs' as never, params: { screen: activeTab } },
                 { name: 'AddEntry' as never },
               ],
             });
