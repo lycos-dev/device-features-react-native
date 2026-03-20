@@ -219,6 +219,42 @@ export const AddEntryScreen: React.FC = () => {
   // ─── Save ─────────────────────────────────────────────────────────────────
   const handleSave = useCallback(async () => {
     if (!validateEntryWithAlert(imageUri, address)) return;
+
+    // If location was denied, confirm the user wants to save without it
+    if (locationError && address === 'No location') {
+      Alert.alert(
+        'Save Without Location?',
+        'This entry has no location attached. Are you sure you want to save it?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Save Anyway',
+            onPress: async () => {
+              try {
+                setStatus('saving');
+                const entry: TravelEntry = {
+                  id: `entry_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                  imageUri: imageUri!,
+                  address: address!,
+                  createdAt: new Date().toISOString(),
+                  ...(coords ? { latitude: coords.latitude, longitude: coords.longitude } : {}),
+                  ...(description.trim() ? { description: description.trim() } : {}),
+                };
+                await saveEntry(entry);
+                await sendEntrySavedNotification(address!);
+                navigation.goBack();
+              } catch (err) {
+                Alert.alert('Save Failed', err instanceof Error ? err.message : 'Could not save entry.');
+              } finally {
+                setStatus('idle');
+              }
+            },
+          },
+        ],
+      );
+      return;
+    }
+
     try {
       setStatus('saving');
       const entry: TravelEntry = {
@@ -373,18 +409,20 @@ export const AddEntryScreen: React.FC = () => {
               ) : locationError ? (
                 <View style={styles.locationRow}>
                   <View style={[styles.locationDot, { backgroundColor: theme.warningLight }]}>
-                    <Text style={[styles.locationDotSymbol, { color: theme.warning }]}>◌</Text>
+                    <Text style={[styles.locationDotSymbol, { color: theme.warning }]}>⊘</Text>
                   </View>
-                  <Text style={[styles.locationText, { color: theme.textSecondary, flex: 1 }]}>No location</Text>
+                  <Text style={[styles.locationText, { color: theme.warning, flex: 1 }]}>Location Denied</Text>
                   <TouchableOpacity
                     onPress={locationPermissionGranted ? fetchLocation : handleEnableLocation}
                     activeOpacity={0.7}
                     style={[styles.enableLocationBtn, {
-                      backgroundColor: theme.primaryLight,
-                      borderColor: theme.border,
+                      backgroundColor: locationPermissionBlocked && !locationPermissionGranted ? theme.surfaceSecondary : theme.warningLight,
+                      borderColor: locationPermissionBlocked && !locationPermissionGranted ? theme.border : theme.warning,
                     }]}
                   >
-                    <Text style={[styles.enableLocationText, { color: theme.primary }]}>
+                    <Text style={[styles.enableLocationText, {
+                      color: locationPermissionBlocked && !locationPermissionGranted ? theme.textSecondary : theme.warning,
+                    }]}>
                       {locationPermissionGranted ? 'Add Location' : locationPermissionBlocked ? 'Go to Settings' : 'Enable'}
                     </Text>
                   </TouchableOpacity>
