@@ -1,2 +1,2 @@
 export { RootNavigator } from './RootNavigator';
-export type { RootStackParamList, RootStackNavigationProp } from './types';
+export type { RootStackNavigationProp, RootStackParamList, TabParamList } from './types';
