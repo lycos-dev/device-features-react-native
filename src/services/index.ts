@@ -8,4 +8,4 @@ export { LocationPermissionDeniedError, LocationUnavailableError } from './locat
 
 export { requestPermission, sendNotification, sendEntrySavedNotification } from './notificationService';
 
-export { getEntries, saveEntry, deleteEntry, clearAllEntries } from './storageService';
+export { getEntries, saveEntry, updateEntry, deleteEntry, clearAllEntries } from './storageService';

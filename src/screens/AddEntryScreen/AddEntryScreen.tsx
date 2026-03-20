@@ -1,11 +1,14 @@
 import { useNavigation } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  AppState,
+  AppStateStatus,
   Image,
+  Linking,
   KeyboardAvoidingView,
   LayoutChangeEvent,
   Modal,
@@ -73,6 +76,8 @@ export const AddEntryScreen: React.FC = () => {
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<SaveStatus>('idle');
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationPermissionBlocked, setLocationPermissionBlocked] = useState(false);
+  const [locationPermissionGranted, setLocationPermissionGranted] = useState(false);
 
   // Camera modal state
   const [showCamera, setShowCamera] = useState(false);
@@ -98,33 +103,21 @@ export const AddEntryScreen: React.FC = () => {
   }, [cameraPermission, requestCameraPermission]);
 
   // ─── Take photo ───────────────────────────────────────────────────────────
-  const handleTakePicture = useCallback(async () => {
-    if (!cameraRef.current) return;
-    try {
-      const result = await cameraRef.current.takePictureAsync({ quality: 0.85 });
-      if (result?.uri) {
-        setShowCamera(false);
-        setTorchOn(false);
-        setImageUri(result.uri);
-        fetchLocation();
-      }
-    } catch {
-      Alert.alert('Error', 'Failed to capture photo.');
-    }
-  }, []);
-
   // ─── Fetch location automatically ─────────────────────────────────────────
   const fetchLocation = useCallback(async () => {
     try {
       setStatus('locating');
       setLocationError(null);
-      const { status: s } = await Location.requestForegroundPermissionsAsync();
+      setLocationPermissionBlocked(false);
+      const { status: s, canAskAgain } = await Location.requestForegroundPermissionsAsync();
       if (s !== 'granted') {
+        setLocationPermissionBlocked(!canAskAgain);
         setLocationError('Location access denied.');
         setAddress('No location');
         return;
       }
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setLocationPermissionGranted(true);
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
       const fetched = await getAddressFromCoords({
         latitude: loc.coords.latitude,
         longitude: loc.coords.longitude,
@@ -138,6 +131,76 @@ export const AddEntryScreen: React.FC = () => {
       setStatus('idle');
     }
   }, []);
+
+  const handleTakePicture = useCallback(async () => {
+    if (!cameraRef.current) return;
+    try {
+      const result = await cameraRef.current.takePictureAsync({ quality: 0.85 });
+      if (result?.uri) {
+        setShowCamera(false);
+        setTorchOn(false);
+        setImageUri(result.uri);
+        fetchLocation();
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to capture photo.');
+    }
+  }, [fetchLocation]);
+
+  // ─── Enable location (from denied state) ──────────────────────────────────
+  const handleEnableLocation = useCallback(async () => {
+    if (locationPermissionBlocked) {
+      // Permanently denied — confirm discard then navigate to Settings screen
+      Alert.alert(
+        'Enable Location in Settings',
+        'Your photo will be discarded. Go to the Settings screen to enable location, then come back and try again.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Go to Settings',
+            style: 'destructive',
+            onPress: () => {
+              setImageUri(null);
+              setAddress(null);
+              setCoords(null);
+              setLocationError(null);
+              setLocationPermissionBlocked(false);
+              setLocationPermissionGranted(false);
+              navigation.navigate('Tabs', { screen: 'Settings' } as any);
+            },
+          },
+        ],
+      );
+      return;
+    }
+    // canAskAgain is true — re-trigger the native iOS permission dialog
+    await fetchLocation();
+  }, [locationPermissionBlocked, fetchLocation, navigation]);
+
+  // ─── Auto-fetch location when user returns from Settings ──────────────────
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  // Use a ref so the AppState listener always sees the latest locationError
+  // value without needing to re-subscribe (avoids stale closure)
+  const locationErrorRef = useRef(locationError);
+  useEffect(() => { locationErrorRef.current = locationError; }, [locationError]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', async (nextState) => {
+      const prev = appStateRef.current;
+      appStateRef.current = nextState;
+      // iOS location permission change resumes via inactive→active or background→active
+      if (prev !== 'active' && nextState === 'active') {
+        if (locationErrorRef.current) {
+          const { status } = await Location.getForegroundPermissionsAsync();
+          if (status === 'granted') {
+            setLocationPermissionGranted(true);
+            fetchLocation();
+          }
+        }
+      }
+    });
+    return () => sub.remove();
+  }, [fetchLocation]);
 
   // ─── Keyboard scroll ──────────────────────────────────────────────────────
   const handleDescriptionLayout = (e: LayoutChangeEvent) => {
@@ -194,9 +257,9 @@ export const AddEntryScreen: React.FC = () => {
   }, [imageUri, address, description, navigation]);
 
   const steps = [
-    { label: 'Photo',    done: !!imageUri },
-    { label: 'Location', done: !!address },
-    { label: 'Save',     done: false },
+    { label: 'Photo',    done: !!imageUri, partial: false },
+    { label: 'Location', done: !!address && address !== 'No location', partial: address === 'No location' },
+    { label: 'Save',     done: false, partial: false },
   ];
 
   return (
@@ -225,13 +288,17 @@ export const AddEntryScreen: React.FC = () => {
               <View style={[
                 styles.stepDot,
                 {
-                  backgroundColor: step.done ? theme.primary : theme.surfaceSecondary,
-                  borderColor: step.done ? theme.primary : theme.border,
+                  backgroundColor: step.done ? theme.primary : step.partial ? theme.warningLight : theme.surfaceSecondary,
+                  borderColor: step.done ? theme.primary : step.partial ? theme.warning : theme.border,
                 },
               ]}>
-                {step.done && <Text style={[styles.stepCheck, { color: theme.textInverse }]}>✓</Text>}
+                {step.done
+                  ? <Text style={[styles.stepCheck, { color: theme.textInverse }]}>✓</Text>
+                  : step.partial
+                  ? <Text style={[styles.stepCheck, { color: theme.warning }]}>◌</Text>
+                  : null}
               </View>
-              <Text style={[styles.stepLabel, { color: step.done ? theme.textPrimary : theme.textSecondary }]}>
+              <Text style={[styles.stepLabel, { color: step.done ? theme.textPrimary : step.partial ? theme.warning : theme.textSecondary }]}>
                 {step.label}
               </Text>
               {i < steps.length - 1 && (
@@ -305,23 +372,27 @@ export const AddEntryScreen: React.FC = () => {
                 </View>
               ) : locationError ? (
                 <View style={styles.locationRow}>
-                  <View style={[styles.locationDot, { backgroundColor: theme.errorLight }]}>
-                    <Text style={[styles.locationDotSymbol, { color: theme.error }]}>⊘</Text>
+                  <View style={[styles.locationDot, { backgroundColor: theme.warningLight }]}>
+                    <Text style={[styles.locationDotSymbol, { color: theme.warning }]}>◌</Text>
                   </View>
-                  <Text style={[styles.locationText, { color: theme.error, flex: 1 }]}>{locationError}</Text>
+                  <Text style={[styles.locationText, { color: theme.textSecondary, flex: 1 }]}>No location</Text>
+                  <TouchableOpacity
+                    onPress={locationPermissionGranted ? fetchLocation : handleEnableLocation}
+                    activeOpacity={0.7}
+                    style={[styles.enableLocationBtn, {
+                      backgroundColor: theme.primaryLight,
+                      borderColor: theme.border,
+                    }]}
+                  >
+                    <Text style={[styles.enableLocationText, { color: theme.primary }]}>
+                      {locationPermissionGranted ? 'Add Location' : locationPermissionBlocked ? 'Go to Settings' : 'Enable'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               ) : address ? (
                 <View style={styles.locationRow}>
-                  <View style={[
-                    styles.locationDot,
-                    { backgroundColor: address === 'No location' ? theme.surfaceSecondary : theme.primaryLight },
-                  ]}>
-                    <Text style={[
-                      styles.locationDotSymbol,
-                      { color: address === 'No location' ? theme.textSecondary : theme.primary },
-                    ]}>
-                      {address === 'No location' ? '—' : '◎'}
-                    </Text>
+                  <View style={[styles.locationDot, { backgroundColor: theme.primaryLight }]}>
+                    <Text style={[styles.locationDotSymbol, { color: theme.primary }]}>◎</Text>
                   </View>
                   <Text style={[styles.locationText, { color: theme.textPrimary, flex: 1 }]}>{address}</Text>
                 </View>
@@ -380,7 +451,7 @@ export const AddEntryScreen: React.FC = () => {
             />
             <Button
               label="Discard"
-              variant="ghost"
+              variant="danger"
               size="lg"
               fullWidth
               theme={theme}
@@ -486,6 +557,17 @@ const styles = StyleSheet.create({
 
   photoArea: { width: '100%', height: 260, borderRadius: 12, overflow: 'hidden' },
   photoPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 24 },
+  enableLocationBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexShrink: 0,
+  },
+  enableLocationText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
   cameraIconWrap: { width: 64, height: 64, borderRadius: 32, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   photoLabel: { fontSize: 15, fontWeight: '600' },
   photoHint: { fontSize: 12, textAlign: 'center', lineHeight: 18 },

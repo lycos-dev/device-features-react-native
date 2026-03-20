@@ -33,17 +33,11 @@ export const validateImage = (imageUri: string | null | undefined): ValidationRe
 };
 
 export const validateAddress = (address: string | null | undefined): ValidationResult => {
+  // 'No location' is acceptable — user may have denied location permission
   if (!address || address.trim() === '') {
     return {
       isValid: false,
-      errorMessage: 'A location is required. Please allow location access and retake the photo.',
-    };
-  }
-
-  if (address.trim().length < 3) {
-    return {
-      isValid: false,
-      errorMessage: 'The address seems too short. Please try again.',
+      errorMessage: 'Location is still loading. Please wait a moment before saving.',
     };
   }
 
@@ -93,7 +87,7 @@ export const validateImageWithAlert = (imageUri: string | null | undefined): boo
 export const validateAddressWithAlert = (address: string | null | undefined): boolean => {
   const result = validateAddress(address);
   if (!result.isValid && result.errorMessage) {
-    showValidationAlert('Location Required', result.errorMessage);
+    showValidationAlert('Location Unavailable', result.errorMessage);
   }
   return result.isValid;
 };

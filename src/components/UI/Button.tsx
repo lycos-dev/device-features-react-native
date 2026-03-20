@@ -79,7 +79,7 @@ function getVariantStyle(variant: ButtonVariant, theme: Theme): ViewStyle {
     case 'secondary':
       return { backgroundColor: theme.surfaceSecondary, borderWidth: 1, borderColor: theme.border };
     case 'danger':
-      return { backgroundColor: theme.error };
+      return { backgroundColor: 'transparent', borderWidth: 1, borderColor: theme.error };
     case 'ghost':
       return { backgroundColor: 'transparent', borderWidth: 1, borderColor: theme.border };
   }
@@ -93,7 +93,7 @@ function getLabelStyle(variant: ButtonVariant, theme: Theme) {
     case 'secondary':
       return { color: theme.textPrimary };
     case 'danger':
-      return { color: '#FFFFFF' };
+      return { color: theme.error };
     case 'ghost':
       return { color: theme.textSecondary };
   }

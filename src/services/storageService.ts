@@ -60,6 +60,27 @@ export const saveEntry = async (entry: TravelEntry): Promise<void> => {
   }
 };
 
+export const updateEntry = async (updated: TravelEntry): Promise<void> => {
+  if (!isValidEntry(updated)) {
+    throw new Error('Invalid entry: all fields (id, imageUri, address, createdAt) are required.');
+  }
+
+  try {
+    const existing = await getEntries();
+    const index = existing.findIndex(e => e.id === updated.id);
+
+    if (index === -1) {
+      throw new Error(`Entry with id "${updated.id}" not found.`);
+    }
+
+    existing[index] = updated;
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+  } catch (error) {
+    if (error instanceof Error) throw error;
+    throw new Error('[StorageService] Failed to update entry.');
+  }
+};
+
 export const deleteEntry = async (id: string): Promise<void> => {
   if (!id?.trim()) {
     throw new Error('A valid entry id is required to delete.');
