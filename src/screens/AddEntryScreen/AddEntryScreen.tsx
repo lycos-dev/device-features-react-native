@@ -84,6 +84,7 @@ export const AddEntryScreen: React.FC = () => {
   const [cameraFacing, setCameraFacing] = useState<'front' | 'back'>('back');
   const [torchOn, setTorchOn] = useState(false);
   const cameraRef = useRef<React.ElementRef<typeof CameraView> | null>(null);
+  const isCapturing = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
   const descriptionY = useRef(0);
 
@@ -133,7 +134,8 @@ export const AddEntryScreen: React.FC = () => {
   }, []);
 
   const handleTakePicture = useCallback(async () => {
-    if (!cameraRef.current) return;
+    if (!cameraRef.current || isCapturing.current) return;
+    isCapturing.current = true;
     try {
       const result = await cameraRef.current.takePictureAsync({ quality: 0.85 });
       if (result?.uri) {
@@ -143,7 +145,12 @@ export const AddEntryScreen: React.FC = () => {
         fetchLocation();
       }
     } catch {
-      Alert.alert('Error', 'Failed to capture photo.');
+      // Only show error if it wasn't a duplicate tap
+      if (!isCapturing.current) {
+        Alert.alert('Error', 'Failed to capture photo.');
+      }
+    } finally {
+      isCapturing.current = false;
     }
   }, [fetchLocation]);
 
