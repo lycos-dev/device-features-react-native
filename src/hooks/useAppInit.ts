@@ -2,7 +2,10 @@ import * as Notifications from 'expo-notifications';
 import { useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus, Platform } from 'react-native';
 
-import { requestPermission } from '../services/notificationService';
+import {
+  promptNotificationPermissionIfNeeded,
+  requestPermission,
+} from '../services/notificationService';
 
 export interface AppInitState {
   isReady: boolean;
@@ -24,11 +27,6 @@ export const useAppInit = (): AppInitState => {
 
     const init = async () => {
       try {
-        // Only request notification permission on startup.
-        // Camera and location are requested contextually when the user
-        // actually taps the camera button — not here.
-        await requestPermission();
-
         // Set up Android notification channel
         if (Platform.OS === 'android') {
           await Notifications.setNotificationChannelAsync('travel-diary', {
@@ -37,6 +35,10 @@ export const useAppInit = (): AppInitState => {
             vibrationPattern: [0, 250, 250, 250],
           });
         }
+
+        // On first launch: show Alert asking user if they want notifications.
+        // On subsequent launches: skip (preference already stored).
+        await promptNotificationPermissionIfNeeded();
 
         // Notification listeners
         notificationListener.current =
@@ -65,7 +67,7 @@ export const useAppInit = (): AppInitState => {
 
     init();
 
-    // Re-check notification permission when app returns to foreground
+    // Re-check system permission when app returns to foreground
     const handleAppStateChange = async (nextState: AppStateStatus) => {
       if (appStateRef.current.match(/inactive|background/) && nextState === 'active') {
         await requestPermission();
