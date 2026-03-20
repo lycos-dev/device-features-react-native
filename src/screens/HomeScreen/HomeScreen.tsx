@@ -46,7 +46,6 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ isDark, onToggle, theme }) =>
       accessibilityRole="switch"
       accessibilityState={{ checked: isDark }}
     >
-      {/* Track */}
       <View
         style={[
           styles.toggleTrack,
@@ -56,16 +55,12 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ isDark, onToggle, theme }) =>
           },
         ]}
       >
-        {/* Static background icons */}
         <Text style={[styles.trackIconLeft, { color: isDark ? theme.textInverse : theme.textMuted, opacity: isDark ? 0.5 : 1 }]}>
-          {/* Sun — Unicode circle with rays */}
           ✦
         </Text>
-        <Text style={[styles.trackIconRight, { color: isDark ? theme.textMuted : theme.textMuted, opacity: isDark ? 1 : 0.4 }]}>
+        <Text style={[styles.trackIconRight, { color: theme.textMuted, opacity: isDark ? 1 : 0.4 }]}>
           ☽
         </Text>
-
-        {/* Sliding knob */}
         <Animated.View
           style={[
             styles.toggleKnob,
@@ -125,6 +120,10 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
+  const handlePressEntry = (item: TravelEntry) => {
+    navigation.navigate('EntryDetails', { entry: item });
+  };
+
   const renderEntry = ({ item }: { item: TravelEntry }) => (
     <EntryCard
       id={item.id}
@@ -132,6 +131,7 @@ export const HomeScreen: React.FC = () => {
       address={item.address}
       createdAt={item.createdAt}
       onDelete={handleDelete}
+      onPress={() => handlePressEntry(item)}
       theme={theme}
     />
   );
@@ -151,7 +151,6 @@ export const HomeScreen: React.FC = () => {
             </Text>
           )}
         </View>
-
         <ThemeToggle isDark={isDark} onToggle={toggleTheme} theme={theme} />
       </View>
 
@@ -203,7 +202,6 @@ export const HomeScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -215,8 +213,6 @@ const styles = StyleSheet.create({
   },
   headerLeft: { gap: 2 },
   entryCount: { fontSize: 12 },
-
-  // Toggle — wider + taller for visibility
   toggleTrack: {
     width: 60,
     height: 34,
@@ -228,16 +224,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     overflow: 'hidden',
   },
-  trackIconLeft: {
-    fontSize: 12,
-    width: 14,
-    textAlign: 'center',
-  },
-  trackIconRight: {
-    fontSize: 12,
-    width: 14,
-    textAlign: 'center',
-  },
+  trackIconLeft: { fontSize: 12, width: 14, textAlign: 'center' },
+  trackIconRight: { fontSize: 12, width: 14, textAlign: 'center' },
   toggleKnob: {
     position: 'absolute',
     width: 28,
@@ -250,10 +238,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
   },
-  knobIcon: {
-    fontSize: 13,
-  },
-
+  knobIcon: { fontSize: 13 },
   listContent: { paddingTop: 8, paddingBottom: 100 },
   emptyContainer: { flex: 1 },
   centered: {
@@ -272,7 +257,6 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   retryText: { fontSize: 13, fontWeight: '500' },
-
   fab: {
     position: 'absolute',
     bottom: 28,
@@ -287,9 +271,5 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 6,
   },
-  fabSymbol: {
-    fontSize: 26,
-    fontWeight: '300',
-    lineHeight: 30,
-  },
+  fabSymbol: { fontSize: 26, fontWeight: '300', lineHeight: 30 },
 });

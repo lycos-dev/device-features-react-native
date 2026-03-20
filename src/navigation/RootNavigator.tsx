@@ -3,6 +3,7 @@ import React from 'react';
 
 import { useTheme } from '../context';
 import { AddEntryScreen } from '../screens/AddEntryScreen';
+import { EntryDetailsScreen } from '../screens/EntryDetailsScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { RootStackParamList } from './types';
 
@@ -27,6 +28,11 @@ export const RootNavigator: React.FC = () => {
         name="AddEntry"
         component={AddEntryScreen}
         options={{ animation: 'slide_from_bottom' }}
+      />
+      <Stack.Screen
+        name="EntryDetails"
+        component={EntryDetailsScreen}
+        options={{ animation: 'slide_from_right' }}
       />
     </Stack.Navigator>
   );

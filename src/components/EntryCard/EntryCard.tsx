@@ -18,17 +18,15 @@ export interface EntryCardProps {
   address: string;
   createdAt: string;
   onDelete: (id: string) => void;
+  onPress: () => void;
   theme: Theme;
 }
 
-// Minimalist trash can built from RN Views — no SVG dependency
+// Minimalist trash can — no SVG dependency
 const TrashIcon: React.FC<{ color: string }> = ({ color }) => (
   <View style={{ alignItems: 'center', gap: 1 }}>
-    {/* Lid bar */}
     <View style={{ width: 14, height: 1.5, backgroundColor: color, borderRadius: 1 }} />
-    {/* Handle bump on lid */}
     <View style={{ width: 6, height: 1.5, backgroundColor: color, borderRadius: 1, marginTop: -3, marginBottom: 1 }} />
-    {/* Body */}
     <View style={{
       width: 12, height: 13,
       borderLeftWidth: 1.5, borderRightWidth: 1.5, borderBottomWidth: 1.5,
@@ -36,7 +34,6 @@ const TrashIcon: React.FC<{ color: string }> = ({ color }) => (
       flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center',
       paddingHorizontal: 2,
     }}>
-      {/* Two inner lines */}
       <View style={{ width: 1.5, height: 7, backgroundColor: color, borderRadius: 1 }} />
       <View style={{ width: 1.5, height: 7, backgroundColor: color, borderRadius: 1 }} />
     </View>
@@ -49,6 +46,7 @@ export const EntryCard: React.FC<EntryCardProps> = ({
   address,
   createdAt,
   onDelete,
+  onPress,
   theme,
 }) => {
   const [imageError, setImageError] = useState(false);
@@ -101,7 +99,7 @@ export const EntryCard: React.FC<EntryCardProps> = ({
     <TouchableWithoutFeedback
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      onPress={() => {}}
+      onPress={onPress}
     >
       <Animated.View
         style={[
@@ -147,7 +145,7 @@ export const EntryCard: React.FC<EntryCardProps> = ({
             </View>
           </View>
 
-          {/* Delete — SVG trash can, red */}
+          {/* Delete button */}
           <TouchableOpacity
             style={[styles.deleteButton, { borderLeftColor: theme.border }]}
             onPress={handleDelete}
@@ -156,7 +154,7 @@ export const EntryCard: React.FC<EntryCardProps> = ({
             accessibilityRole="button"
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <TrashIcon color={theme.error} size={18} />
+            <TrashIcon color={theme.error} />
           </TouchableOpacity>
         </View>
       </Animated.View>
