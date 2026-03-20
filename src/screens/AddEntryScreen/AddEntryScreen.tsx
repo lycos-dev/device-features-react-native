@@ -1,4 +1,4 @@
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -89,6 +89,25 @@ export const AddEntryScreen: React.FC = () => {
   const descriptionY = useRef(0);
 
   const isLoading = status !== 'idle';
+
+  // ─── Reset screen state when navigating away without saving ──────────────
+  // Requirement: "it will clear that travel entry screen upon going back to it"
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        setImageUri(null);
+        setAddress(null);
+        setCoords(null);
+        setDescription('');
+        setStatus('idle');
+        setLocationError(null);
+        setLocationPermissionBlocked(false);
+        setLocationPermissionGranted(false);
+        setShowCamera(false);
+        setTorchOn(false);
+      };
+    }, [])
+  );
 
   // ─── Open camera modal ────────────────────────────────────────────────────
   const handleOpenCamera = useCallback(async () => {
