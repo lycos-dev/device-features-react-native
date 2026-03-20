@@ -86,36 +86,15 @@ export const AddEntryScreen: React.FC = () => {
 
   // ─── Open camera modal ────────────────────────────────────────────────────
   const handleOpenCamera = useCallback(async () => {
-    // Already granted — open straight away
-    if (cameraPermission?.granted) {
-      setShowCamera(true);
-      return;
-    }
-
-    // Never asked yet — show the native iOS system permission dialog
-    if (cameraPermission?.canAskAgain !== false) {
+    const granted = cameraPermission?.granted;
+    if (!granted) {
       const result = await requestCameraPermission();
-      if (result.granted) {
-        setShowCamera(true);
-      } else {
-        // User just denied — show a plain message, do NOT call
-        // Linking.openSettings(). Opening Settings causes iOS to kill
-        // the Expo Go process when camera permission is changed there.
-        Alert.alert(
-          'Camera Access Required',
-          'Please go to Settings > Privacy & Security > Camera > Expo Go and enable access.',
-          [{ text: 'OK' }],
-        );
+      if (!result.granted) {
+        Alert.alert('Camera Access Required', 'Please allow camera access in Settings.');
+        return;
       }
-      return;
     }
-
-    // Permanently denied — same plain message, no Settings link
-    Alert.alert(
-      'Camera Access Required',
-      'Please go to Settings > Privacy & Security > Camera > Expo Go and enable access.',
-      [{ text: 'OK' }],
-    );
+    setShowCamera(true);
   }, [cameraPermission, requestCameraPermission]);
 
   // ─── Take photo ───────────────────────────────────────────────────────────
@@ -394,6 +373,7 @@ export const AddEntryScreen: React.FC = () => {
               variant="primary"
               size="lg"
               fullWidth
+              theme={theme}
               onPress={handleSave}
               loading={status === 'saving'}
               disabled={isLoading || !imageUri || !address}
@@ -403,6 +383,7 @@ export const AddEntryScreen: React.FC = () => {
               variant="ghost"
               size="lg"
               fullWidth
+              theme={theme}
               onPress={handleDiscard}
               disabled={isLoading}
             />
